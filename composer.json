@@ -1,0 +1,45 @@
+{
+    "name": "ernestdefoe/ladder",
+    "description": "Post-count ranks for Flarum. Members climb a ladder of groups, and hold exactly one rung at a time.",
+    "keywords": [
+        "flarum",
+        "flarum-extension",
+        "ranks",
+        "groups",
+        "post count",
+        "gamification"
+    ],
+    "type": "flarum-extension",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ernest Defoe",
+            "email": "ernestdefoe@gmail.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/ernestdefoe/ladder/issues",
+        "source": "https://github.com/ernestdefoe/ladder",
+        "forum": "https://discuss.flarum.org/d/39973"
+    },
+    "require": {
+        "php": "^8.3",
+        "flarum/core": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ernestdefoe\\Ladder\\": "src/"
+        }
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "Ladder",
+            "category": "feature",
+            "icon": {
+                "name": "fas fa-stairs",
+                "backgroundColor": "#7c3aed",
+                "color": "#fff"
+            }
+        }
+    }
+}

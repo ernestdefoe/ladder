@@ -1,0 +1,158 @@
+// The Ranks page. Every colour comes from the forum's own theme variables,
+// except each rung's accent, which is that rank's group colour.
+
+.LadderRanks {
+  max-width: 760px;
+}
+
+.LadderRanks-header {
+  margin-bottom: 20px;
+}
+
+.LadderRanks-title {
+  margin: 0 0 6px;
+  font-size: 22px;
+  color: var(--heading-color);
+}
+
+.LadderRanks-intro {
+  margin: 0;
+  color: var(--muted-color);
+}
+
+.LadderRanks-empty {
+  color: var(--muted-color);
+}
+
+.LadderRanks-standing {
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  border-radius: var(--border-radius);
+  background: var(--control-bg);
+  color: var(--control-color);
+
+  p {
+    margin: 0 0 4px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.LadderRanks-meter {
+  height: 8px;
+  margin-top: 12px;
+  border-radius: 4px;
+  background: var(--body-bg);
+  overflow: hidden;
+}
+
+.LadderRanks-meterFill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--ladder-next, var(--primary-color));
+  transition: width 0.4s ease;
+}
+
+.LadderRanks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.LadderRanks-rung {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--ladder-color, var(--control-bg));
+  border-radius: var(--border-radius);
+
+  & + & {
+    margin-top: 6px;
+  }
+
+  &--mine {
+    background: var(--control-bg);
+  }
+}
+
+.LadderRanks-badge .Badge {
+  --size: 28px;
+  font-size: 13px;
+}
+
+.LadderRanks-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.LadderRanks-nameLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.LadderRanks-name {
+  font-weight: bold;
+  font-size: 15px;
+  // The rank colour is on the bar and the badge, never the text: an admin
+  // picks it for a badge background, and a yellow or pale rank is unreadable
+  // as text on a light theme.
+  color: var(--text-color);
+}
+
+.LadderRanks-here {
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--primary-color);
+  color: var(--body-bg);
+}
+
+.LadderRanks-description {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted-color);
+}
+
+.LadderRanks-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.LadderRanks-range {
+  font-weight: bold;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.LadderRanks-members {
+  font-size: 12px;
+  color: var(--muted-color);
+  white-space: nowrap;
+}
+
+@media @phone {
+  .LadderRanks-rung {
+    flex-wrap: wrap;
+  }
+
+  .LadderRanks-meta {
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+    padding-left: 42px;
+    align-items: baseline;
+    text-align: left;
+  }
+}
