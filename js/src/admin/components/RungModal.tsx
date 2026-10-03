@@ -31,6 +31,9 @@ export default class RungModal extends FormModal<RungModalAttrs> {
   icon!: Stream<string>;
   color!: Stream<string>;
   description!: Stream<string>;
+  imageFile: File | null = null;
+  imagePreview: string | null = null;
+  removeImage = false;
 
   oninit(vnode: any) {
     super.oninit(vnode);
@@ -45,6 +48,32 @@ export default class RungModal extends FormModal<RungModalAttrs> {
     this.icon = Stream(rung?.icon ?? '');
     this.color = Stream(rung?.color ?? '');
     this.description = Stream(rung?.description ?? '');
+    this.imagePreview = rung?.imageUrl ?? null;
+  }
+
+  onremove(vnode: any) {
+    super.onremove(vnode);
+    if (this.imageFile && this.imagePreview) URL.revokeObjectURL(this.imagePreview);
+  }
+
+  pickImage(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+
+    if (!file) return;
+
+    if (this.imageFile && this.imagePreview) URL.revokeObjectURL(this.imagePreview);
+
+    this.imageFile = file;
+    this.imagePreview = URL.createObjectURL(file);
+    this.removeImage = false;
+  }
+
+  clearImage() {
+    if (this.imageFile && this.imagePreview) URL.revokeObjectURL(this.imagePreview);
+
+    this.imageFile = null;
+    this.imagePreview = null;
+    this.removeImage = !!this.attrs.rung?.imageUrl;
   }
 
   className() {
@@ -161,6 +190,31 @@ export default class RungModal extends FormModal<RungModalAttrs> {
           </div>
           <div className="helpText LadderRungModal-help">{t('icon_help')}</div>
 
+          <div className="Form-group LadderRungModal-image">
+            <label>{t('image_label')}</label>
+            <div className="LadderRungModal-imageRow">
+              <div
+                className={`LadderRungModal-imageThumb${this.imagePreview ? '' : ' LadderRungModal-imageThumb--icon'}`}
+                style={{ '--ladder-color': this.color() || 'var(--primary-color)' }}
+              >
+                {this.imagePreview ? <img src={this.imagePreview} alt="" /> : <i className={this.icon() || 'fas fa-star'} aria-hidden="true" />}
+              </div>
+              <div className="LadderRungModal-imageActions">
+                <label className="Button">
+                  <i className="icon fas fa-upload Button-icon" aria-hidden="true" />
+                  <span className="Button-label">{this.imagePreview ? t('image_replace') : t('image_choose')}</span>
+                  <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="LadderRungModal-file" onchange={(e: Event) => this.pickImage(e)} />
+                </label>
+                {this.imagePreview && (
+                  <Button className="Button Button--link" icon="fas fa-times" onclick={() => this.clearImage()}>
+                    {t('image_remove')}
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="helpText">{t('image_help')}</div>
+          </div>
+
           <div className="Form-group">
             <label for="ladder-description">{t('description_label')}</label>
             <textarea id="ladder-description" name="description" className="FormControl" rows={2} maxlength={500} bidi={this.description} />
@@ -200,6 +254,7 @@ export default class RungModal extends FormModal<RungModalAttrs> {
     this.loading = true;
 
     ladderApi(rung ? 'PATCH' : 'POST', rung ? `/rungs/${rung.id}` : '/rungs', body, { errorHandler: this.onerror.bind(this) })
+      .then((ladder) => this.saveImage(ladder))
       .then((ladder) => {
         this.hide();
         this.attrs.onsaved(ladder);
@@ -208,6 +263,32 @@ export default class RungModal extends FormModal<RungModalAttrs> {
         this.loading = false;
         m.redraw();
       });
+  }
+
+  /**
+   * The picture goes up as its own request once the rung exists, because a
+   * brand-new rung has no id to attach it to until the first save answers.
+   */
+  saveImage(ladder: LadderData): Promise<LadderData> {
+    const id = ladder.savedId;
+
+    if (!id) return Promise.resolve(ladder);
+
+    if (this.imageFile) {
+      const data = new FormData();
+      data.append('image', this.imageFile);
+
+      // 🚨 A failed upload must not leave the modal open on a rung that has
+      // already been saved: pressing Save again would try to create it twice.
+      // Flarum's own alert reports the error; the rung is kept either way.
+      return ladderApi<LadderData>('POST', `/rungs/${id}/image`, data, { serialize: (raw: FormData) => raw }).catch(() => ladder);
+    }
+
+    if (this.removeImage) {
+      return ladderApi<LadderData>('DELETE', `/rungs/${id}/image`).catch(() => ladder);
+    }
+
+    return Promise.resolve(ladder);
   }
 
   remove() {

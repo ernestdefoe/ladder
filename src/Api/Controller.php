@@ -4,6 +4,8 @@ namespace Ernestdefoe\Ladder\Api;
 
 use Ernestdefoe\Ladder\Ladder;
 use Ernestdefoe\Ladder\Rung;
+use Ernestdefoe\Ladder\RungImages;
+use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\Http\RequestUtil;
 use Flarum\User\User;
 use Illuminate\Contracts\Cache\Repository as Cache;
@@ -18,6 +20,9 @@ abstract class Controller implements RequestHandlerInterface
 {
     /** Writes are admin-only; the public ladder overrides this. */
     protected bool $adminOnly = true;
+
+    /** The rung a write just touched, so the admin page can follow up on it. */
+    protected ?int $savedId = null;
 
     public function __construct(protected Ladder $ladder, protected ConnectionInterface $db, protected Cache $cache)
     {
@@ -65,6 +70,7 @@ abstract class Controller implements RequestHandlerInterface
         $this->ladder->forget();
 
         $counts = $this->ladder->memberCounts();
+        $images = resolve(RungImages::class);
         $rungs = $this->ladder->rungs()->values();
         $data = [];
 
@@ -93,6 +99,7 @@ abstract class Controller implements RequestHandlerInterface
                 'description' => $rung->description,
                 'ownsGroup' => $rung->owns_group,
                 'memberCount' => $counts[$group->id] ?? 0,
+                'imageUrl' => $images->url($rung->image_path),
             ];
         }
 
@@ -110,10 +117,19 @@ abstract class Controller implements RequestHandlerInterface
             ];
         }
 
+        $settings = resolve(SettingsRepositoryInterface::class);
+
         return [
             'rungs' => $data,
             'demotes' => $this->ladder->demotes(),
             'viewer' => $viewer,
+            'banner' => [
+                // Empty means "use the forum's own title", decided by the
+                // client so a renamed forum never shows its old name here.
+                'title' => (string) $settings->get(Ladder::BANNER_TITLE),
+                'tagline' => (string) $settings->get(Ladder::BANNER_TAGLINE),
+            ],
+            'savedId' => $this->savedId,
         ];
     }
 }

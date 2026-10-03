@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $min_posts
  * @property string|null $description
  * @property bool $owns_group
+ * @property string|null $image_path
  * @property-read Group|null $group
  */
 class Rung extends AbstractModel

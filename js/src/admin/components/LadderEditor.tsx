@@ -6,6 +6,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Icon from 'flarum/common/components/Icon';
 import { ladderApi, rangeLabel, LadderData, RungData, SyncResult } from '../../common/api';
 import RungModal from './RungModal';
+import LadderBanner from '../../common/components/LadderBanner';
 import state from '../state';
 
 const t = (name: string, params: Record<string, any> = {}) => app.translator.trans(`ernestdefoe-ladder.admin.${name}`, params);
@@ -65,6 +66,14 @@ export default class LadderEditor extends Component {
         </div>
 
         {this.progressView()}
+
+        {!!this.ladder?.rungs.length && (
+          <div className="LadderEditor-preview">
+            <label>{t('ladder.preview')}</label>
+            <div className="helpText">{t('ladder.preview_help')}</div>
+            <LadderBanner ladder={this.ladder} />
+          </div>
+        )}
       </div>
     );
   }
@@ -100,6 +109,11 @@ export default class LadderEditor extends Component {
             </span>
           )}
           {!rung.ownsGroup && <span className="LadderEditor-tag">{t('ladder.existing_group')}</span>}
+          {rung.imageUrl && (
+            <span className="LadderEditor-flag" title={t('ladder.has_image')}>
+              <Icon name="fas fa-image" />
+            </span>
+          )}
           <span className="LadderEditor-edit">
             <Icon name="fas fa-pen" />
           </span>

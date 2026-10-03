@@ -73,5 +73,24 @@ export default [
       type: 'switch',
       label: t('settings.show_nav_label'),
       help: t('settings.show_nav_help'),
+    }))
+    .setting(() => ({
+      setting: key('banner_title'),
+      type: 'text',
+      label: t('settings.banner_title_label'),
+      help: t('settings.banner_title_help'),
+      placeholder: app.forum.attribute('title'),
+    }))
+    .setting(() => ({
+      setting: key('banner_tagline'),
+      type: 'text',
+      label: t('settings.banner_tagline_label'),
+      help: t('settings.banner_tagline_help'),
+    }))
+    .setting(() => ({
+      setting: key('banner_on_index'),
+      type: 'switch',
+      label: t('settings.banner_on_index_label'),
+      help: t('settings.banner_on_index_help'),
     })),
 ];

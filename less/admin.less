@@ -152,3 +152,71 @@
   display: flex;
   gap: 8px;
 }
+
+.LadderEditor-preview {
+  margin-top: 24px;
+
+  .LadderBanner {
+    margin: 10px 0 0;
+  }
+}
+
+// The admin page is wider than the rung list; the preview may use all of it.
+.LadderEditor:has(.LadderEditor-preview) {
+  max-width: none;
+
+  .LadderEditor-rungs,
+  .LadderEditor-progress {
+    max-width: 720px;
+  }
+}
+
+.LadderRungModal-imageRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.LadderRungModal-imageThumb {
+  flex: 0 0 60px;
+  height: 100px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--ladder-color);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  &--icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 24px;
+  }
+}
+
+.LadderRungModal-imageActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+
+  // The real file input is invisible; the Button label around it is the
+  // control, so keyboard and click both open the picker.
+  label.Button {
+    position: relative;
+    overflow: hidden;
+  }
+}
+
+.LadderRungModal-file {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}

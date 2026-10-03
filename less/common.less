@@ -1,0 +1,176 @@
+// ── The ranks banner ───────────────────────────────────────────────────────
+// Modelled on the hand-made rank posters forums post for their members: a
+// title between two rules, then one tall card per rank in its own colour.
+// Theme variables throughout, so it sits right in light and dark mode.
+
+.LadderBanner {
+  padding: 26px 22px 20px;
+  margin-bottom: 24px;
+  border-radius: calc(var(--border-radius) * 2);
+  background: var(--control-bg);
+}
+
+.LadderBanner-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+// A thick rule in the forum's colour over a thin dark one.
+.LadderBanner-rule {
+  flex: 1;
+  height: 10px;
+  min-width: 20px;
+  border-top: 5px solid var(--primary-color);
+  border-bottom: 2px solid var(--text-color);
+}
+
+.LadderBanner-titles {
+  text-align: center;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.LadderBanner-title {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1.05;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--primary-color);
+  // The heavy outlined lettering of a poster title, without an image.
+  -webkit-text-stroke: 1.5px var(--text-color);
+  paint-order: stroke fill;
+  text-shadow: 3px 3px 0 var(--text-color);
+  overflow-wrap: anywhere;
+}
+
+.LadderBanner-tagline {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-color);
+}
+
+.LadderBanner-cards {
+  list-style: none;
+  margin: 0;
+  padding: 4px 2px 6px;
+  display: grid;
+  // Every rank across one row, the way a poster shows them. Cards shrink
+  // with their text and icons until they reach a floor; past that (a phone,
+  // or a very long ladder) the row scrolls sideways a card at a time rather
+  // than squeezing posters into slivers.
+  grid-template-columns: repeat(var(--ladder-count), minmax(76px, 1fr));
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+}
+
+.LadderBanner-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  scroll-snap-align: start;
+  // Text and icon size follow the card's own width, so thirteen narrow cards
+  // and four wide ones both read as designed.
+  container-type: inline-size;
+}
+
+.LadderBanner-name {
+  // A fixed height, not padding: a shrunken long name must not make its card
+  // shorter than its neighbours and knock the row out of line.
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: ~"clamp(24px, 28cqi, 32px)";
+  padding: 0 3px;
+  border-radius: 8px 8px 0 0;
+  background: var(--ladder-color);
+  color: #fff;
+  font-size: ~"clamp(8px, calc(12.5cqi * var(--ladder-fit, 1)), 14px)";
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+
+  &.text-contrast--dark {
+    color: #111;
+  }
+}
+
+.LadderBanner-art {
+  position: relative;
+  aspect-ratio: 3 / 5;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+  background: var(--ladder-color);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  // No artwork: the rank's icon glowing on its own colour.
+  &--icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.38), transparent 62%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.18)),
+      var(--ladder-color);
+  }
+}
+
+.LadderBanner-icon {
+  font-size: ~"clamp(22px, 42cqi, 54px)";
+  color: #fff;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+}
+
+.LadderBanner-range {
+  margin-top: 8px;
+  line-height: 1.2;
+  text-align: center;
+  font-size: ~"clamp(11px, 15cqi, 16px)";
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-color);
+}
+
+.LadderBanner-card--mine {
+  .LadderBanner-art {
+    box-shadow: 0 0 0 3px var(--body-bg), 0 0 0 6px var(--ladder-color);
+  }
+}
+
+@media @phone {
+  .LadderBanner {
+    padding: 18px 12px 14px;
+  }
+
+  .LadderBanner-title {
+    font-size: 26px;
+    text-shadow: 2px 2px 0 var(--text-color);
+  }
+
+  .LadderBanner-tagline {
+    letter-spacing: 0.18em;
+  }
+
+  .LadderBanner-cards {
+    grid-template-columns: repeat(var(--ladder-count), 104px);
+  }
+}

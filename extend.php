@@ -20,11 +20,13 @@ use Flarum\Extend;
 return [
     (new Extend\Frontend('forum'))
         ->js(__DIR__.'/js/dist/forum.js')
+        ->css(__DIR__.'/less/common.less')
         ->css(__DIR__.'/less/forum.less')
         ->route('/ranks', 'ladder.ranks'),
 
     (new Extend\Frontend('admin'))
         ->js(__DIR__.'/js/dist/admin.js')
+        ->css(__DIR__.'/less/common.less')
         ->css(__DIR__.'/less/admin.less'),
 
     new Extend\Locales(__DIR__.'/locale'),
@@ -34,6 +36,8 @@ return [
         ->post('/ladder/rungs', 'ladder.rungs.create', Api\SaveRung::class)
         ->patch('/ladder/rungs/{id}', 'ladder.rungs.update', Api\SaveRung::class)
         ->delete('/ladder/rungs/{id}', 'ladder.rungs.delete', Api\DeleteRung::class)
+        ->post('/ladder/rungs/{id}/image', 'ladder.rungs.image', Api\RungImage::class)
+        ->delete('/ladder/rungs/{id}/image', 'ladder.rungs.image.delete', Api\RungImage::class)
         ->post('/ladder/sync', 'ladder.sync', Api\SyncLadder::class),
 
     (new Extend\Event())
@@ -57,5 +61,7 @@ return [
         ->default(Ladder::EXEMPT_GROUPS, '[]')
         ->default(Ladder::SHOW_NAV, true)
         ->default(InheritPermissions::SETTING, true)
-        ->serializeToForum('ladderShowNav', Ladder::SHOW_NAV, 'boolval'),
+        ->default(Ladder::BANNER_ON_INDEX, false)
+        ->serializeToForum('ladderShowNav', Ladder::SHOW_NAV, 'boolval')
+        ->serializeToForum('ladderBannerOnIndex', Ladder::BANNER_ON_INDEX, 'boolval'),
 ];

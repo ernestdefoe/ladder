@@ -13,12 +13,15 @@ export type RungData = {
   description: string | null;
   ownsGroup: boolean;
   memberCount: number;
+  imageUrl: string | null;
 };
 
 export type LadderData = {
   rungs: RungData[];
   demotes: boolean;
   viewer: { posts: number; groupId: number | null } | null;
+  banner: { title: string; tagline: string };
+  savedId: number | null;
 };
 
 export type SyncResult = {

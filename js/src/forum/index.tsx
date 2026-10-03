@@ -1,12 +1,16 @@
 import app from 'flarum/forum/app';
-import { extend } from 'flarum/common/extend';
+import { extend, override } from 'flarum/common/extend';
 import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import LinkButton from 'flarum/common/components/LinkButton';
 import ItemList from 'flarum/common/utils/ItemList';
+import IndexPage from 'flarum/forum/components/IndexPage';
 import PromotedNotification from './components/PromotedNotification';
+import LadderBanner from '../common/components/LadderBanner';
+import { ladder, loadLadder } from './ladderStore';
 
 export { default as extend } from './extend';
 export { default as RanksPage } from './components/RanksPage';
+export { LadderBanner, loadLadder };
 
 app.initializers.add('ernestdefoe-ladder', () => {
   app.notificationComponents.ladderPromoted = PromotedNotification;
@@ -23,6 +27,31 @@ app.initializers.add('ernestdefoe-ladder', () => {
       // lower and it lands beneath every tag, below the fold on most forums.
       -11
     );
+  });
+
+  // The banner in the home page's hero, under the welcome message, when the
+  // admin asks for it. Only on the unfiltered home page: a tag page has its
+  // own hero and its own subject.
+  override(IndexPage.prototype, 'hero', function (this: any, original: () => any) {
+    const hero = original();
+
+    if (!app.forum.attribute('ladderBannerOnIndex') || this.attrs.routeName !== 'index') return hero;
+
+    const data = ladder();
+
+    if (!data) {
+      loadLadder();
+      return hero;
+    }
+
+    if (!data.rungs.length) return hero;
+
+    return [
+      hero,
+      <div className="LadderIndexHero container">
+        <LadderBanner ladder={data} currentGroupId={data.viewer?.groupId} />
+      </div>,
+    ];
   });
 
   /*

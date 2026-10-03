@@ -13,7 +13,7 @@ never touched.
 [![Licence](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.3%2B-777bb4)](https://www.php.net)
 
-![The Ranks page: where you stand, how far it is to the next rank, and every rank on the ladder](screenshots/ranks-page.png)
+![The ranks banner: every rank as a card in its own colour, with the posts it takes](screenshots/banner.png)
 
 ---
 
@@ -33,6 +33,12 @@ never touched.
 - **Applied straight away.** Any change to the ladder re-ranks the whole forum
   in the background of the admin page, with a progress bar. There's no "saved
   but not applied" state.
+- **A ranks banner, made for you.** Your whole ladder as one poster: a card
+  per rank in its colour, with its icon and post range, under a title and
+  tagline. It's drawn from the ladder, so it updates the moment you change a
+  rank. Give a rank a picture and it fills that rank's card instead of the
+  icon. It sits at the top of the Ranks page, and optionally in your home
+  page's hero.
 - **A public Ranks page** at `/ranks`, built from the ladder itself, so it can't
   go out of date. Signed-in members see their rank and how many posts it takes
   to reach the next one.
@@ -41,6 +47,8 @@ never touched.
 - **Works on any host.** Rank changes happen as the post is saved, with no queue
   worker or cron needed. Re-ranking runs from the browser in small slices, so
   it fits inside a shared host's time limits too.
+
+![The Ranks page: where you stand, how far it is to the next rank, and every rank on the ladder](screenshots/ranks-page.png)
 
 | Admin | Editing a rung | On a phone |
 |---|---|---|
@@ -88,6 +96,26 @@ post count.
   and its members move down to the rung below.
 - A rung made from a group **you already had** only stops being a rung. The
   group and its members stay exactly as they are.
+
+---
+
+## The ranks banner
+
+The banner is built from your ladder, with no image to make or keep up to
+date. Each rank is a card with its name in a bar of its colour, its icon
+glowing on that colour, and the posts it takes underneath.
+
+- **Title and tagline:** set under **Banner title** and **Banner tagline**.
+  Leave the title empty to use your forum's name.
+- **Pictures:** edit a rank and choose a **Banner picture** to show artwork on
+  its card instead of the icon. Tall pictures fit best, about 3 wide by 5
+  high. Uploads are resized and converted to WebP for you.
+- **Where it shows:** always at the top of the Ranks page. Turn on **Also show
+  the banner on the home page** to put it in the home page's hero, under the
+  welcome message.
+- **Long ladders:** every rank fits on one row on a desktop screen. Names
+  shrink to fit their card, and on a phone the row scrolls sideways a card at
+  a time.
 
 ---
 

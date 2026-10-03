@@ -95,6 +95,8 @@ class SaveRung extends Controller
             $rung->save();
         });
 
+        $this->savedId = $rung->id;
+
         $this->changed();
 
         return $this->ladderPayload($actor);

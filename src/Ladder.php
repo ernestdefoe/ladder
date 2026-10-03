@@ -30,6 +30,9 @@ class Ladder
     public const DEMOTE = 'ernestdefoe-ladder.demote';
     public const EXEMPT_GROUPS = 'ernestdefoe-ladder.exempt_groups';
     public const SHOW_NAV = 'ernestdefoe-ladder.show_nav';
+    public const BANNER_TITLE = 'ernestdefoe-ladder.banner_title';
+    public const BANNER_TAGLINE = 'ernestdefoe-ladder.banner_tagline';
+    public const BANNER_ON_INDEX = 'ernestdefoe-ladder.banner_on_index';
 
     /** @var Collection<int, Rung>|null */
     private ?Collection $rungs = null;

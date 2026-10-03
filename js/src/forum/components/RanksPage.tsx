@@ -6,7 +6,9 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Badge from 'flarum/common/components/Badge';
 import extractText from 'flarum/common/utils/extractText';
 import classList from 'flarum/common/utils/classList';
-import { ladderApi, rangeLabel, LadderData, RungData } from '../../common/api';
+import { rangeLabel, LadderData, RungData } from '../../common/api';
+import LadderBanner from '../../common/components/LadderBanner';
+import { loadLadder } from '../ladderStore';
 
 const t = (name: string, params: Record<string, any> = {}) => app.translator.trans(`ernestdefoe-ladder.forum.ranks.${name}`, params);
 
@@ -25,7 +27,7 @@ export default class RanksPage extends Page {
 
     app.history.push('ladder.ranks', extractText(t('title')));
 
-    ladderApi('GET').then((ladder) => {
+    loadLadder().then((ladder) => {
       this.ladder = ladder;
       m.redraw();
     });
@@ -40,7 +42,7 @@ export default class RanksPage extends Page {
 
   view() {
     return (
-      <PageStructure className="LadderRanksPage" sidebar={() => <IndexSidebar />}>
+      <PageStructure className="LadderRanksPage" hero={() => this.hero()} sidebar={() => <IndexSidebar />}>
         <div className="LadderRanks">
           <header className="LadderRanks-header">
             <h2 className="LadderRanks-title">{t('title')}</h2>
@@ -50,6 +52,16 @@ export default class RanksPage extends Page {
           {this.ladder === null ? <LoadingIndicator /> : this.body(this.ladder)}
         </div>
       </PageStructure>
+    );
+  }
+
+  hero() {
+    if (!this.ladder?.rungs.length) return null;
+
+    return (
+      <div className="LadderRanksPage-hero container">
+        <LadderBanner ladder={this.ladder} currentGroupId={this.ladder.viewer?.groupId} />
+      </div>
     );
   }
 
