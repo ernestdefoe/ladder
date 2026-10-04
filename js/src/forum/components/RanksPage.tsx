@@ -9,6 +9,7 @@ import classList from 'flarum/common/utils/classList';
 import { rangeLabel, unit, LadderData, RungData } from '../../common/api';
 import LadderBanner from '../../common/components/LadderBanner';
 import { loadLadder } from '../ladderStore';
+import RankMembersModal from './RankMembersModal';
 
 const t = (name: string, params: Record<string, any> = {}) => app.translator.trans(`ernestdefoe-ladder.forum.ranks.${name}`, params);
 
@@ -153,7 +154,18 @@ export default class RanksPage extends Page {
         </div>
         <div className="LadderRanks-meta">
           <span className="LadderRanks-range">{rangeLabel('ernestdefoe-ladder.forum.ranks', rung, this.ladder?.metric)}</span>
-          <span className="LadderRanks-members">{t('members', { count: rung.memberCount })}</span>
+          {this.ladder?.canListMembers && rung.memberCount > 0 ? (
+            <button
+              type="button"
+              className="LadderRanks-members LadderRanks-members--link"
+              onclick={() => app.modal.show(RankMembersModal, { rung, metric: this.ladder!.metric })}
+            >
+              {t('members', { count: rung.memberCount })}
+              <i className="fas fa-chevron-right" aria-hidden="true" />
+            </button>
+          ) : (
+            <span className="LadderRanks-members">{t('members', { count: rung.memberCount })}</span>
+          )}
         </div>
       </li>
     );

@@ -135,6 +135,16 @@ glowing on that colour, and the posts it takes underneath.
 
 ---
 
+## On profiles, and who holds each rank
+
+- **Every member's profile** shows their rank, their count, and a bar towards
+  the next rank ("12 more posts until Sam reaches Veteran", or "to reach" on
+  your own profile). Members kept off the ladder show nothing.
+- **Click a rank's member count** on the Ranks page to see who holds it,
+  highest count first. It's offered to whoever may list members at all (the
+  same *Search users* permission as Flarum's own member list), so a forum that
+  keeps its membership private stays private.
+
 ## Ranking by points instead of posts
 
 If you run [Leaderboard](https://discuss.flarum.org/d/38834) or

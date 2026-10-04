@@ -334,6 +334,93 @@ class Ladder
     }
 
     /**
+     * Where a member stands, for their profile: their rank, the next one, and
+     * the score between. Null when they are kept off the ladder or there is
+     * no ladder.
+     *
+     * Reads without writing: this runs for whoever views a profile, so it must
+     * not save anything on the member being looked at.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function standing(User $user, User $viewer): ?array
+    {
+        // Hidden rung groups stay hidden from everyone but admins, as on the
+        // Ranks page.
+        $rungs = $this->rungs()
+            ->filter(fn (Rung $rung) => $viewer->isAdmin() || ! $rung->group->is_hidden)
+            ->values();
+
+        if ($rungs->isEmpty()) {
+            return null;
+        }
+
+        $all = $user->groups()->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        if (array_intersect($all, $this->exemptGroupIds())) {
+            return null;
+        }
+
+        $metric = $this->metric();
+        $score = match ($metric) {
+            'points' => max(0, (int) $this->db->table(self::LEADERBOARD_TOTALS)->where('user_id', $user->id)->value('points_total')),
+            'votes' => max(0, (int) $this->db->table('users')->where('id', $user->id)->value('votes')),
+            default => (int) $user->comment_count,
+        };
+
+        $current = $rungs->last(fn (Rung $rung) => in_array($rung->group_id, $all, true));
+        $floor = $current ? $current->min_posts : -1;
+        $next = $rungs->first(fn (Rung $rung) => $rung->min_posts > $floor && $rung->min_posts > $score);
+
+        $describe = fn (Rung $rung) => [
+            'groupId' => $rung->group_id,
+            'name' => $rung->group->name_singular,
+            'icon' => $rung->group->icon,
+            'color' => $rung->group->color,
+            'min' => $rung->min_posts,
+        ];
+
+        return [
+            'metric' => $metric,
+            'score' => $score,
+            'current' => $current ? $describe($current) : null,
+            'next' => $next ? $describe($next) : null,
+        ];
+    }
+
+    /**
+     * Members holding one rung, highest score first.
+     *
+     * 🚨 Query builder, never raw SQL with table names: raw SQL skips the
+     * forum's table prefix and breaks on every forum that has one.
+     *
+     * @return array{users: \Illuminate\Support\Collection<int, User>, total: int}
+     */
+    public function membersOf(Rung $rung, User $viewer, int $offset, int $limit): array
+    {
+        $query = User::query()
+            ->whereVisibleTo($viewer)
+            ->whereHas('groups', fn ($q) => $q->where('groups.id', $rung->group_id));
+
+        $total = (clone $query)->count();
+
+        $query->select('users.*');
+
+        match ($this->metric()) {
+            'points' => $query
+                ->leftJoin(self::LEADERBOARD_TOTALS, self::LEADERBOARD_TOTALS.'.user_id', '=', 'users.id')
+                ->addSelect(self::LEADERBOARD_TOTALS.'.points_total as ladder_score')
+                ->orderByDesc(self::LEADERBOARD_TOTALS.'.points_total'),
+            'votes' => $query->addSelect('users.votes as ladder_score')->orderByDesc('users.votes'),
+            default => $query->addSelect('users.comment_count as ladder_score')->orderByDesc('users.comment_count'),
+        };
+
+        $users = $query->orderBy('users.id')->offset($offset)->limit($limit)->get();
+
+        return ['users' => $users, 'total' => $total];
+    }
+
+    /**
      * Re-rank the whole forum in one go, quietly. Used when every score may
      * have moved at once.
      */

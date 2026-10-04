@@ -34,6 +34,7 @@ export type LadderData = {
   metric: Metric;
   leaderboardAvailable: boolean;
   gamificationAvailable: boolean;
+  canListMembers: boolean;
   viewer: { score: number; groupId: number | null; exempt?: boolean } | null;
   banner: { title: string; tagline: string };
   savedId: number | null;
@@ -62,3 +63,11 @@ export function rangeLabel(prefix: string, rung: RungData, metric?: Metric): any
     ? app.translator.trans(`${prefix}.${unit('range_open', metric)}`, { min: rung.minPosts })
     : app.translator.trans(`${prefix}.${unit('range', metric)}`, { min: rung.minPosts, max: rung.maxPosts });
 }
+
+/** A member's place on the ladder, as their profile shows it. */
+export type Standing = {
+  metric: Metric;
+  score: number;
+  current: { groupId: number; name: string; icon: string | null; color: string | null; min: number } | null;
+  next: { groupId: number; name: string; icon: string | null; color: string | null; min: number } | null;
+};

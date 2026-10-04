@@ -140,6 +140,137 @@
   font-size: 12px;
   color: var(--muted-color);
   white-space: nowrap;
+
+  // Opens the list of who holds the rank.
+  &--link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+
+    .fas { font-size: 9px; }
+
+    &:hover,
+    &:focus-visible {
+      color: var(--link-color);
+      text-decoration: underline;
+    }
+  }
+}
+
+// ---------------------------------------------------------------- members modal
+
+.LadderMembers {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+
+  &-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: var(--border-radius);
+    color: var(--text-color);
+
+    &:hover,
+    &:focus-visible {
+      background: var(--control-bg);
+      text-decoration: none;
+    }
+  }
+
+  &-avatar {
+    --size: 32px;
+    flex-shrink: 0;
+  }
+
+  &-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &-score {
+    font-size: 12px;
+    color: var(--muted-color);
+    white-space: nowrap;
+  }
+
+  &-empty {
+    text-align: center;
+    color: var(--muted-color);
+  }
+}
+
+// ---------------------------------------------------------------- profile card
+
+.LadderStanding {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: var(--border-radius);
+  border-left: 3px solid var(--ladder-color, var(--control-bg));
+  background: var(--control-bg);
+  list-style: none;
+
+  &-heading {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-color);
+    margin-bottom: 8px;
+
+    a { color: inherit; }
+  }
+
+  &-rank {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-color);
+
+    &--none { color: var(--muted-color); font-weight: 600; }
+  }
+
+  &-score {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--muted-color);
+  }
+
+  &-meter {
+    height: 6px;
+    margin-top: 10px;
+    border-radius: 3px;
+    background: var(--body-bg);
+    overflow: hidden;
+  }
+
+  &-meterFill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--ladder-next, var(--primary-color));
+  }
+
+  &-next {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted-color);
+
+    strong { color: var(--text-color); }
+  }
 }
 
 @media @phone {

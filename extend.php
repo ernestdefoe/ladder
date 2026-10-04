@@ -17,7 +17,11 @@ use Ernestdefoe\Ladder\Ladder;
 use Ernestdefoe\Ladder\Listener\RankMember;
 use Ernestdefoe\Ladder\Middleware\RecheckActiveMember;
 use Ernestdefoe\Ladder\Notification\PromotedBlueprint;
+use Flarum\Api\Context;
+use Flarum\Api\Resource\UserResource;
+use Flarum\Api\Schema;
 use Flarum\Extend;
+use Flarum\User\User;
 
 return [
     (new Extend\Frontend('forum'))
@@ -40,7 +44,20 @@ return [
         ->delete('/ladder/rungs/{id}', 'ladder.rungs.delete', Api\DeleteRung::class)
         ->post('/ladder/rungs/{id}/image', 'ladder.rungs.image', Api\RungImage::class)
         ->delete('/ladder/rungs/{id}/image', 'ladder.rungs.image.delete', Api\RungImage::class)
-        ->post('/ladder/sync', 'ladder.sync', Api\SyncLadder::class),
+        ->post('/ladder/sync', 'ladder.sync', Api\SyncLadder::class)
+        ->get('/ladder/rungs/{id}/members', 'ladder.rungs.members', Api\RungMembers::class),
+
+    /*
+     * A member's standing, for their profile. Only on the profile's own
+     * request: computing it for every user in a list would be a query per
+     * member on every discussion page.
+     */
+    (new Extend\ApiResource(UserResource::class))
+        ->fields(fn () => [
+            Schema\Arr::make('ladderStanding')
+                ->visible(fn (User $user, Context $context) => $context->showing(UserResource::class))
+                ->get(fn (User $user, Context $context) => resolve(Ladder::class)->standing($user, $context->getActor())),
+        ]),
 
     (new Extend\Event())
         ->subscribe(RankMember::class),

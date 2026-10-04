@@ -5,6 +5,7 @@ import LinkButton from 'flarum/common/components/LinkButton';
 import ItemList from 'flarum/common/utils/ItemList';
 import IndexPage from 'flarum/forum/components/IndexPage';
 import PromotedNotification from './components/PromotedNotification';
+import LadderStanding from './components/LadderStanding';
 import LadderBanner from '../common/components/LadderBanner';
 import { ladder, loadLadder } from './ladderStore';
 
@@ -14,6 +15,32 @@ export { LadderBanner, loadLadder };
 
 app.initializers.add('ernestdefoe-ladder', () => {
   app.notificationComponents.ladderPromoted = PromotedNotification;
+
+  /*
+   * Rank and progress on a member's profile. 🚨 By module name: UserPage is a
+   * lazy chunk in Flarum 2, so a static import would be undefined here.
+   * `ladderStanding` is only sent with the profile's own request, so this
+   * shows nothing until that has loaded.
+   */
+  extend('flarum/forum/components/UserPage', 'sidebarItems', function (this: any, items: ItemList<any>) {
+    const standing = this.user?.attribute('ladderStanding');
+    if (!standing) return;
+
+    items.add('ladderStanding', <LadderStanding standing={standing} user={this.user} />, -10);
+  });
+
+  /*
+   * 🚨 Your own profile never asks the server for you: the signed-in member is
+   * already in the store from the page load, so UserPage shows them as-is and
+   * `ladderStanding` never arrives. Fetch it once when it's missing (null
+   * means "fetched, nothing to show"; undefined means never fetched).
+   */
+  extend('flarum/forum/components/UserPage', 'show', function (this: any, _: any, user: any) {
+    if (!user || user.attribute('ladderStanding') !== undefined || user.__ladderFetching) return;
+
+    user.__ladderFetching = true;
+    app.store.find('users', user.id()).finally(() => m.redraw());
+  });
 
   extend(IndexSidebar.prototype, 'navItems', function (items: ItemList<any>) {
     if (!app.forum.attribute('ladderShowNav')) return;

@@ -133,6 +133,9 @@ abstract class Controller implements RequestHandlerInterface
         return [
             'rungs' => $data,
             'demotes' => $this->ladder->demotes(),
+            // Each rank opens a list of who holds it, for those allowed to
+            // list members at all.
+            'canListMembers' => $actor->can('searchUsers'),
             'metric' => $this->ladder->metric(),
             // Only the admin page offers the choice, and only when it exists.
             'leaderboardAvailable' => $actor->isAdmin() && $this->ladder->leaderboardAvailable(),
