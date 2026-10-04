@@ -106,14 +106,25 @@ abstract class Controller implements RequestHandlerInterface
         $viewer = null;
 
         if (! $actor->isGuest()) {
-            $held = array_values(array_intersect(
-                $actor->groups->pluck('id')->map(fn ($id) => (int) $id)->all(),
-                $this->ladder->groupIds(),
-            ));
+            /*
+             * 🚨 Put the reader on the right rung before describing it. A
+             * member whose rank was never applied (a ladder built before they
+             * last posted, a re-rank that didn't finish) was told they needed
+             * "10 more posts to reach your first rank" — naming the rung ABOVE
+             * the one they had already earned. Seen on a live forum.
+             */
+            $this->ladder->syncUser($actor);
+            $actor->unsetRelation('groups');
+
+            $all = $actor->groups()->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $held = array_values(array_intersect($all, $this->ladder->groupIds()));
 
             $viewer = [
                 'posts' => (int) $actor->comment_count,
                 'groupId' => $held[0] ?? null,
+                // Kept off the ladder on purpose (staff, bots): no rank is
+                // coming, so the page must not promise one.
+                'exempt' => (bool) array_intersect($all, $this->ladder->exemptGroupIds()),
             ];
         }
 

@@ -79,6 +79,7 @@ ernestdefoe-ladder:
       top: You've reached the top rank.
       unranked: "{count, plural, one {# more post} other {# more posts}} to reach your first rank, {rank}."
       guest: Sign up and start posting to climb the ladder.
+      exempt: Your group is kept off the ladder, so you don't hold a rank.
     notifications:
       promoted: "You've reached the rank {rank}!"
     settings:

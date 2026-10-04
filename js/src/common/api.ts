@@ -19,7 +19,7 @@ export type RungData = {
 export type LadderData = {
   rungs: RungData[];
   demotes: boolean;
-  viewer: { posts: number; groupId: number | null } | null;
+  viewer: { posts: number; groupId: number | null; exempt?: boolean } | null;
   banner: { title: string; tagline: string };
   savedId: number | null;
 };

@@ -84,6 +84,10 @@ export default class RanksPage extends Page {
       return <div className="LadderRanks-standing LadderRanks-standing--guest">{t('guest')}</div>;
     }
 
+    if (viewer.exempt) {
+      return <div className="LadderRanks-standing LadderRanks-standing--guest">{t('exempt')}</div>;
+    }
+
     const rungs = ladder.rungs;
     const index = rungs.findIndex((rung) => rung.groupId === viewer.groupId);
     const current = index >= 0 ? rungs[index] : null;
