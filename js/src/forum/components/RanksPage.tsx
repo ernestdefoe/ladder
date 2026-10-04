@@ -6,7 +6,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Badge from 'flarum/common/components/Badge';
 import extractText from 'flarum/common/utils/extractText';
 import classList from 'flarum/common/utils/classList';
-import { rangeLabel, LadderData, RungData } from '../../common/api';
+import { rangeLabel, unit, LadderData, RungData } from '../../common/api';
 import LadderBanner from '../../common/components/LadderBanner';
 import { loadLadder } from '../ladderStore';
 
@@ -46,7 +46,8 @@ export default class RanksPage extends Page {
         <div className="LadderRanks">
           <header className="LadderRanks-header">
             <h2 className="LadderRanks-title">{t('title')}</h2>
-            <p className="LadderRanks-intro">{t('intro')}</p>
+            {/* Only once loaded: the wording depends on what the ladder counts. */}
+            {this.ladder && <p className="LadderRanks-intro">{t(unit('intro', this.ladder.metric))}</p>}
           </header>
 
           {this.ladder === null ? <LoadingIndicator /> : this.body(this.ladder)}
@@ -95,29 +96,29 @@ export default class RanksPage extends Page {
     // The next rung is the first one above both the rank held and the posts
     // made. With demotion off a member can hold a rank above their count.
     const floor = current ? current.minPosts : -1;
-    const next = rungs.find((rung) => rung.minPosts > floor && rung.minPosts > viewer.posts) ?? null;
+    const next = rungs.find((rung) => rung.minPosts > floor && rung.minPosts > viewer.score) ?? null;
 
     let percent = 100;
 
     if (next) {
       // A member can hold a rank above their own count (demotion off, a
       // threshold raised), so measure from whichever is lower.
-      const from = Math.min(current ? current.minPosts : 0, viewer.posts);
+      const from = Math.min(current ? current.minPosts : 0, viewer.score);
       const span = Math.max(1, next.minPosts - from);
-      percent = Math.max(0, Math.min(100, Math.round(((viewer.posts - from) / span) * 100)));
+      percent = Math.max(0, Math.min(100, Math.round(((viewer.score - from) / span) * 100)));
     }
 
-    const remaining = next ? next.minPosts - viewer.posts : 0;
+    const remaining = next ? next.minPosts - viewer.score : 0;
 
     return (
       <div className="LadderRanks-standing">
         <div className="LadderRanks-standingText">
-          {current && <p>{t('your_rank', { rank: <strong>{current.name}</strong>, count: viewer.posts })}</p>}
+          {current && <p>{t(unit('your_rank', ladder.metric), { rank: <strong>{current.name}</strong>, count: viewer.score })}</p>}
           <p>
             {next
               ? current
-                ? t('next', { count: remaining, rank: <strong>{next.name}</strong> })
-                : t('unranked', { count: remaining, rank: <strong>{next.name}</strong> })
+                ? t(unit('next', ladder.metric), { count: remaining, rank: <strong>{next.name}</strong> })
+                : t(unit('unranked', ladder.metric), { count: remaining, rank: <strong>{next.name}</strong> })
               : t('top')}
           </p>
         </div>
@@ -151,7 +152,7 @@ export default class RanksPage extends Page {
           {rung.description && <p className="LadderRanks-description">{rung.description}</p>}
         </div>
         <div className="LadderRanks-meta">
-          <span className="LadderRanks-range">{rangeLabel('ernestdefoe-ladder.forum.ranks', rung)}</span>
+          <span className="LadderRanks-range">{rangeLabel('ernestdefoe-ladder.forum.ranks', rung, this.ladder?.metric)}</span>
           <span className="LadderRanks-members">{t('members', { count: rung.memberCount })}</span>
         </div>
       </li>

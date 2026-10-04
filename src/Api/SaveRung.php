@@ -105,7 +105,7 @@ class SaveRung extends Controller
     private function validMinPosts(mixed $value, Rung $rung): int
     {
         if (! is_numeric($value) || (int) $value < 0 || (int) $value != $value) {
-            $this->fail('minPosts', 'min_posts_invalid');
+            $this->fail('minPosts', $this->ladder->metric() !== 'posts' ? 'min_points_invalid' : 'min_posts_invalid');
         }
 
         $value = (int) $value;
@@ -116,7 +116,7 @@ class SaveRung extends Controller
             ->exists();
 
         if ($taken) {
-            $this->fail('minPosts', 'min_posts_taken', ['count' => $value]);
+            $this->fail('minPosts', $this->ladder->metric() !== 'posts' ? 'min_points_taken' : 'min_posts_taken', ['count' => $value]);
         }
 
         return $value;

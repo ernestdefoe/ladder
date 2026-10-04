@@ -31,6 +31,16 @@ class RankMember
         // first reply.
         $events->listen(Registered::class, fn (Registered $event) => $this->rank($event->user, false));
 
+        // fof/gamification announces every change to a member's points, so in
+        // that mode the rank follows a vote instantly. (Leaderboard announces
+        // nothing; see RecheckActiveMember.)
+        if (class_exists(\FoF\Gamification\Events\UserPointsUpdated::class)) {
+            $events->listen(
+                \FoF\Gamification\Events\UserPointsUpdated::class,
+                fn ($event) => $this->rank($event->user)
+            );
+        }
+
         // With Approval, a held post is private and does not count until a
         // moderator lets it through, so the promotion belongs to that moment.
         if (class_exists(\Flarum\Approval\Event\PostWasApproved::class)) {

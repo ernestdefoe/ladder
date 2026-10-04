@@ -4,7 +4,7 @@ import Button from 'flarum/common/components/Button';
 import Badge from 'flarum/common/components/Badge';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Icon from 'flarum/common/components/Icon';
-import { ladderApi, rangeLabel, LadderData, RungData, SyncResult } from '../../common/api';
+import { ladderApi, rangeLabel, unit, LadderData, Metric, RungData, SyncResult } from '../../common/api';
 import RungModal from './RungModal';
 import LadderBanner from '../../common/components/LadderBanner';
 import state from '../state';
@@ -27,6 +27,7 @@ type Progress = { done: number; total: number; changed: number; status: 'running
 export default class LadderEditor extends Component {
   ladder: LadderData | null = null;
   progress: Progress | null = null;
+  switchedTo: Metric | null = null;
 
   oninit(vnode: any) {
     super.oninit(vnode);
@@ -47,7 +48,9 @@ export default class LadderEditor extends Component {
     return (
       <div className="Form-group LadderEditor">
         <label>{t('ladder.heading')}</label>
-        <div className="helpText">{t('ladder.help')}</div>
+        <div className="helpText">{t(unit('ladder.help', this.ladder?.metric))}</div>
+
+        {this.metricChoice()}
 
         {this.ladder === null ? <LoadingIndicator /> : this.rungList()}
 
@@ -78,11 +81,74 @@ export default class LadderEditor extends Component {
     );
   }
 
+  /**
+   * Posts, Leaderboard points or Gamification points. Only offered when at
+   * least one of those extensions is enabled.
+   *
+   * Saved the moment it's picked and followed straight away by a re-rank, like
+   * every other ladder edit: a forum ranked by one count while the page says
+   * another is the state this editor exists to prevent.
+   */
+  metricChoice() {
+    const ladder = this.ladder;
+
+    if (!ladder) return null;
+
+    const options: Metric[] = ['posts'];
+    if (ladder.leaderboardAvailable) options.push('points');
+    if (ladder.gamificationAvailable) options.push('votes');
+
+    if (options.length < 2) return null;
+
+    return (
+      <div className="LadderEditor-metric">
+        <div className="LadderEditor-metricLabel">{t('metric.label')}</div>
+        <div className="LadderEditor-metricChoice" role="radiogroup" aria-label={t('metric.label')}>
+          {options.map((option) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={ladder.metric === option ? 'true' : 'false'}
+              className={'LadderEditor-metricOption' + (ladder.metric === option ? ' is-active' : '')}
+              disabled={this.progress?.status === 'running'}
+              onclick={() => this.setMetric(option)}
+            >
+              {t('metric.' + option)}
+            </button>
+          ))}
+        </div>
+        <div className="helpText">
+          {ladder.metric === 'posts' ? t('metric.help') : t('metric.help_' + ladder.metric)}{' '}
+          {ladder.metric === 'points' && t('metric.points_note')}
+        </div>
+        {this.switchedTo && <div className="LadderEditor-metricSwitched">{t('metric.switched', { metric: t('metric.' + this.switchedTo) })}</div>}
+      </div>
+    );
+  }
+
+  async setMetric(metric: Metric) {
+    if (!this.ladder || this.ladder.metric === metric) return;
+
+    await app.request({
+      method: 'POST',
+      url: app.forum.attribute('apiUrl') + '/settings',
+      body: { 'ernestdefoe-ladder.metric': metric },
+    });
+
+    // The page's own settings form holds a copy of every setting; keep it in
+    // step so its Save button can't write the old value back.
+    app.data.settings['ernestdefoe-ladder.metric'] = metric;
+
+    this.switchedTo = metric;
+    await this.load();
+    this.rerank();
+  }
+
   rungList() {
     const rungs = this.ladder!.rungs;
 
     if (!rungs.length) {
-      return <p className="LadderEditor-empty">{t('ladder.empty')}</p>;
+      return <p className="LadderEditor-empty">{t(unit('ladder.empty', this.ladder!.metric))}</p>;
     }
 
     // Highest rank on top, the way a ladder is drawn.
@@ -101,7 +167,7 @@ export default class LadderEditor extends Component {
             <Badge icon={rung.icon || 'fas fa-circle'} color={rung.color || undefined} />
           </span>
           <span className="LadderEditor-name">{rung.name}</span>
-          <span className="LadderEditor-range">{rangeLabel('ernestdefoe-ladder.admin.ladder', rung)}</span>
+          <span className="LadderEditor-range">{rangeLabel('ernestdefoe-ladder.admin.ladder', rung, this.ladder!.metric)}</span>
           <span className="LadderEditor-members">{t('ladder.members', { count: rung.memberCount })}</span>
           {rung.isHidden && (
             <span className="LadderEditor-flag" title={t('ladder.hidden_group')}>

@@ -220,3 +220,57 @@
   opacity: 0;
   cursor: pointer;
 }
+
+// Posts or Leaderboard points: a segmented switch, both options in view.
+.LadderEditor-metric {
+  margin: 12px 0 16px;
+
+  &Label {
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  &Choice {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 8px;
+    background: var(--control-bg);
+    border: 1px solid var(--control-bg-shaded, var(--control-bg));
+  }
+
+  &Option {
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--muted-color);
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover:not([disabled]) { color: var(--text-color); }
+
+    &.is-active {
+      background: var(--body-bg);
+      color: var(--text-color);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    &[disabled] { cursor: default; opacity: 0.6; }
+
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 1px;
+    }
+  }
+
+  .helpText { margin-top: 8px; }
+
+  &Switched {
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--control-bg);
+    color: var(--text-color);
+  }
+}

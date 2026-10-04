@@ -3,7 +3,8 @@
 /*
  * Ladder: post-count ranks, one rung at a time.
  *
- * Each rung is an ordinary Flarum group with a post threshold. A member holds
+ * Each rung is an ordinary Flarum group with a threshold: posts by default, or
+ * points from huseyinfiliz/leaderboard. A member holds
  * exactly one rung group, the one their post count has earned, and moves up
  * when they cross the next threshold. Every other group they belong to is
  * left alone.
@@ -14,6 +15,7 @@ use Ernestdefoe\Ladder\Console\SyncCommand;
 use Ernestdefoe\Ladder\InheritPermissions;
 use Ernestdefoe\Ladder\Ladder;
 use Ernestdefoe\Ladder\Listener\RankMember;
+use Ernestdefoe\Ladder\Middleware\RecheckActiveMember;
 use Ernestdefoe\Ladder\Notification\PromotedBlueprint;
 use Flarum\Extend;
 
@@ -43,6 +45,10 @@ return [
     (new Extend\Event())
         ->subscribe(RankMember::class),
 
+    // Points mode: re-rank a member as they use the forum. See the class.
+    (new Extend\Middleware('forum'))->add(RecheckActiveMember::class),
+    (new Extend\Middleware('api'))->add(RecheckActiveMember::class),
+
     // 🚨 Alert only. A promotion is worth a badge lighting up; an email for
     // each one teaches members to filter the forum's mail.
     (new Extend\Notification())
@@ -62,6 +68,7 @@ return [
         ->default(Ladder::SHOW_NAV, true)
         ->default(InheritPermissions::SETTING, true)
         ->default(Ladder::BANNER_ON_INDEX, false)
+        ->default(Ladder::METRIC, 'posts')
         ->serializeToForum('ladderShowNav', Ladder::SHOW_NAV, 'boolval')
         ->serializeToForum('ladderBannerOnIndex', Ladder::BANNER_ON_INDEX, 'boolval'),
 ];

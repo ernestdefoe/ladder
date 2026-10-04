@@ -127,11 +127,32 @@ glowing on that colour, and the posts it takes underneath.
 - A member is re-ranked when they post, when one of their posts is deleted, and
   when a held post of theirs is approved.
 - **No demotion by default.** Once a rank is reached it's kept, even if posts
-  are deleted later. Deleting a thread or pruning spam shouldn't strip a rank
-  someone earned in public. Turn on **Move members down when their post count
-  drops** for a strict ranking.
+  are deleted or points taken away later. Deleting a thread or pruning spam
+  shouldn't strip a rank someone earned in public. Turn on **Move members down
+  when they fall below their rank** for a strict ranking.
 - **Exempt groups.** Members of any group you list under **Groups that never get
   a rank** are kept off the ladder entirely. Useful for bots and staff accounts.
+
+---
+
+## Ranking by points instead of posts
+
+If you run [Leaderboard](https://discuss.flarum.org/d/38834) or
+[FoF Gamification](https://github.com/FriendsOfFlarum/gamification), the ladder
+page offers **Rank members by**: Posts, Leaderboard points or Gamification
+points. Pick one and everyone is re-ranked straight away; the thresholds stay
+as they are, so check they still make sense.
+
+- **Leaderboard points** count everything Leaderboard scores: posts, likes,
+  reactions, best answers, daily logins and the rest. Leaderboard doesn't
+  announce when points change, so a member's rank is checked whenever they use
+  the forum, at most every two minutes. Points earned while they're away, like
+  likes on their posts, show up on their next visit, still with no cron job.
+- **Gamification points** are the votes a member's posts have received. FoF
+  Gamification announces every change, so ranks move the moment a vote is cast.
+- Members see "points" everywhere the page would otherwise say "posts".
+- If the extension you chose is turned off, Ladder goes back to counting posts
+  rather than treating everyone as having 0 points.
 
 ---
 

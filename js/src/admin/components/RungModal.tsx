@@ -6,7 +6,7 @@ import ColorPreviewInput from 'flarum/common/components/ColorPreviewInput';
 import Group from 'flarum/common/models/Group';
 import Stream from 'flarum/common/utils/Stream';
 import extractText from 'flarum/common/utils/extractText';
-import { ladderApi, LadderData, RungData } from '../../common/api';
+import { ladderApi, unit, LadderData, RungData } from '../../common/api';
 
 const t = (name: string, params: Record<string, any> = {}) => app.translator.trans(`ernestdefoe-ladder.admin.modal.${name}`, params);
 
@@ -166,11 +166,11 @@ export default class RungModal extends FormModal<RungModalAttrs> {
               <input id="ladder-name" name="name" className="FormControl" bidi={this.name} maxlength={100} required />
             </div>
             <div className="Form-group LadderRungModal-threshold">
-              <label for="ladder-min">{t('min_posts_label')}</label>
+              <label for="ladder-min">{t(unit('min_posts_label', this.attrs.ladder?.metric))}</label>
               <input id="ladder-min" name="minPosts" className="FormControl" type="number" min="0" step="1" bidi={this.minPosts} required />
             </div>
           </div>
-          <div className="helpText LadderRungModal-help">{t('min_posts_help')}</div>
+          <div className="helpText LadderRungModal-help">{t(unit('min_posts_help', this.attrs.ladder?.metric))}</div>
 
           <div className="Form-group">
             <label for="ladder-plural">{t('plural_label')}</label>

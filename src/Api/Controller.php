@@ -120,7 +120,7 @@ abstract class Controller implements RequestHandlerInterface
             $held = array_values(array_intersect($all, $this->ladder->groupIds()));
 
             $viewer = [
-                'posts' => (int) $actor->comment_count,
+                'score' => $this->ladder->score($actor),
                 'groupId' => $held[0] ?? null,
                 // Kept off the ladder on purpose (staff, bots): no rank is
                 // coming, so the page must not promise one.
@@ -133,6 +133,10 @@ abstract class Controller implements RequestHandlerInterface
         return [
             'rungs' => $data,
             'demotes' => $this->ladder->demotes(),
+            'metric' => $this->ladder->metric(),
+            // Only the admin page offers the choice, and only when it exists.
+            'leaderboardAvailable' => $actor->isAdmin() && $this->ladder->leaderboardAvailable(),
+            'gamificationAvailable' => $actor->isAdmin() && $this->ladder->gamificationAvailable(),
             'viewer' => $viewer,
             'banner' => [
                 // Empty means "use the forum's own title", decided by the

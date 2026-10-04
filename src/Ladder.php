@@ -3,6 +3,7 @@
 namespace Ernestdefoe\Ladder;
 
 use Ernestdefoe\Ladder\Notification\PromotedBlueprint;
+use Flarum\Extension\ExtensionManager;
 use Flarum\Group\Group;
 use Flarum\Notification\NotificationSyncer;
 use Flarum\Settings\SettingsRepositoryInterface;
@@ -33,6 +34,14 @@ class Ladder
     public const BANNER_TITLE = 'ernestdefoe-ladder.banner_title';
     public const BANNER_TAGLINE = 'ernestdefoe-ladder.banner_tagline';
     public const BANNER_ON_INDEX = 'ernestdefoe-ladder.banner_on_index';
+    public const METRIC = 'ernestdefoe-ladder.metric';
+
+    /** huseyinfiliz/leaderboard: one row per member, their running points total. */
+    private const LEADERBOARD = 'huseyinfiliz-leaderboard';
+
+    /** fof/gamification: a member's points live in `users.votes`. */
+    private const GAMIFICATION = 'fof-gamification';
+    private const LEADERBOARD_TOTALS = 'leaderboard_user_totals';
 
     /** @var Collection<int, Rung>|null */
     private ?Collection $rungs = null;
@@ -42,7 +51,69 @@ class Ladder
         private SettingsRepositoryInterface $settings,
         private Dispatcher $events,
         private NotificationSyncer $notifications,
+        private ExtensionManager $extensions,
     ) {
+    }
+
+    /**
+     * What the thresholds count: 'posts' (the default), 'points' from the
+     * Leaderboard extension, or 'votes', fof/gamification's points.
+     *
+     * 🚨 Falls back to posts whenever the chosen extension is not enabled,
+     * whatever the setting says. Disabling it must not leave every member
+     * scored 0 and, with demotion on, knocked to the bottom rung.
+     */
+    public function metric(): string
+    {
+        return match ($this->settings->get(self::METRIC)) {
+            'points' => $this->leaderboardAvailable() ? 'points' : 'posts',
+            'votes' => $this->gamificationAvailable() ? 'votes' : 'posts',
+            default => 'posts',
+        };
+    }
+
+    public function gamificationAvailable(): bool
+    {
+        return $this->extensions->isEnabled(self::GAMIFICATION);
+    }
+
+    public function leaderboardAvailable(): bool
+    {
+        return $this->extensions->isEnabled(self::LEADERBOARD);
+    }
+
+    /**
+     * The number a member's rung is chosen by.
+     *
+     * Posts are read fresh rather than trusted: core, Approval and this
+     * extension all react to the same events, and the order they run in is not
+     * something any of them decides. Points are read from Leaderboard's own
+     * totals, never recalculated here; a member with no row yet has 0, and a
+     * negative total (points taken away) counts as 0.
+     */
+    public function score(User $user): int
+    {
+        $metric = $this->metric();
+
+        if ($metric === 'points') {
+            $total = $this->db->table(self::LEADERBOARD_TOTALS)->where('user_id', $user->id)->value('points_total');
+
+            return max(0, (int) $total);
+        }
+
+        // Read from the table, not the model: gamification updates the column
+        // with a query, so the User object in hand can hold the old number.
+        if ($metric === 'votes') {
+            return max(0, (int) $this->db->table('users')->where('id', $user->id)->value('votes'));
+        }
+
+        $user->refreshCommentCount();
+
+        if ($user->isDirty('comment_count')) {
+            $user->save();
+        }
+
+        return (int) $user->comment_count;
     }
 
     /**
@@ -77,7 +148,7 @@ class Ladder
     }
 
     /**
-     * The rung a post count earns on its own: the highest threshold it meets.
+     * The rung a score earns on its own: the highest threshold it meets.
      */
     public function earned(int $posts): ?Rung
     {
@@ -124,15 +195,7 @@ class Ladder
             return;
         }
 
-        // Read the count fresh rather than trust whichever listener ran
-        // first. Core, Approval and this extension all react to the same
-        // events, and the order they run in is not something any of them
-        // decides.
-        $user->refreshCommentCount();
-
-        if ($user->isDirty('comment_count')) {
-            $user->save();
-        }
+        $score = $this->score($user);
 
         $user->unsetRelation('groups');
 
@@ -141,7 +204,7 @@ class Ladder
         $ladderIds = $this->groupIds();
         $held = array_values(array_intersect($allIds, $ladderIds));
 
-        $target = $this->target((int) $user->comment_count, $held, $allIds);
+        $target = $this->target($score, $held, $allIds);
         $wanted = $target === null ? [] : [$target];
 
         if ($held == $wanted) {
@@ -190,11 +253,25 @@ class Ladder
      */
     public function syncChunk(int $afterId, int $limit = 500): array
     {
-        $users = $this->db->table('users')
-            ->where('id', '>', $afterId)
-            ->orderBy('id')
-            ->limit($limit)
-            ->get(['id', 'comment_count']);
+        /*
+         * In points mode the total comes from Leaderboard's table by a join.
+         * 🚨 Query builder only: a raw join would skip the forum's table
+         * prefix and fail on every forum that has one.
+         */
+        $metric = $this->metric();
+
+        $users = $metric === 'points'
+            ? $this->db->table('users')
+                ->leftJoin(self::LEADERBOARD_TOTALS, self::LEADERBOARD_TOTALS.'.user_id', '=', 'users.id')
+                ->where('users.id', '>', $afterId)
+                ->orderBy('users.id')
+                ->limit($limit)
+                ->get(['users.id', self::LEADERBOARD_TOTALS.'.points_total as score'])
+            : $this->db->table('users')
+                ->where('id', '>', $afterId)
+                ->orderBy('id')
+                ->limit($limit)
+                ->get(['id', ($metric === 'votes' ? 'votes' : 'comment_count').' as score']);
 
         if ($users->isEmpty()) {
             return ['processed' => 0, 'changed' => 0, 'lastId' => $afterId, 'done' => true];
@@ -216,7 +293,7 @@ class Ladder
             $all = $memberships->get($user->id, []);
             $held = array_values(array_intersect($all, $ladderIds));
 
-            $target = $ladderIds ? $this->target((int) $user->comment_count, $held, $all) : null;
+            $target = $ladderIds ? $this->target(max(0, (int) $user->score), $held, $all) : null;
             $wanted = $target === null ? [] : [$target];
 
             foreach (array_diff($held, $wanted) as $groupId) {
