@@ -31,6 +31,25 @@ class RankMember
         // first reply.
         $events->listen(Registered::class, fn (Registered $event) => $this->rank($event->user, false));
 
+        // Leaderboard announces each change once it ships PointsUpdated
+        // (offered upstream). With it, points mode is instant and the
+        // active-member re-check stands down; older versions still rely on it.
+        if (class_exists(\HuseyinFiliz\Leaderboard\Event\PointsUpdated::class)) {
+            $events->listen(
+                \HuseyinFiliz\Leaderboard\Event\PointsUpdated::class,
+                fn ($event) => $this->ladder->metric() === 'points' ? $this->rank($event->user) : null
+            );
+        }
+
+        // A full recalculation can move anyone, so re-rank everyone, quietly,
+        // as the admin's own re-rank does.
+        if (class_exists(\HuseyinFiliz\Leaderboard\Event\PointsRecalculated::class)) {
+            $events->listen(
+                \HuseyinFiliz\Leaderboard\Event\PointsRecalculated::class,
+                fn () => $this->ladder->metric() === 'points' ? $this->ladder->syncAll() : null
+            );
+        }
+
         // fof/gamification announces every change to a member's points, so in
         // that mode the rank follows a vote instantly. (Leaderboard announces
         // nothing; see RecheckActiveMember.)

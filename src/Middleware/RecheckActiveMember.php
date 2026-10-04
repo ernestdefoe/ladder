@@ -24,7 +24,8 @@ use Psr\Log\LoggerInterface;
  * At most once per member per INTERVAL. `add()` is atomic, so a page firing
  * several API calls at once still runs one check, not one each.
  *
- * Posts mode skips all of this: posting is an event Ladder already hears.
+ * Posts mode skips all of this: posting is an event Ladder already hears. So
+ * does a Leaderboard new enough to dispatch PointsUpdated (see RankMember).
  */
 class RecheckActiveMember implements MiddlewareInterface
 {
@@ -42,6 +43,7 @@ class RecheckActiveMember implements MiddlewareInterface
         $actor = RequestUtil::getActor($request);
 
         if (! $actor->isGuest() && $this->ladder->metric() === 'points'
+            && ! class_exists(\HuseyinFiliz\Leaderboard\Event\PointsUpdated::class)
             && $this->cache->add('ladder.recheck.'.$actor->id, 1, self::INTERVAL)) {
             /*
              * 🚨 Never allowed to fail the request. A rank that is a minute

@@ -334,6 +334,24 @@ class Ladder
     }
 
     /**
+     * Re-rank the whole forum in one go, quietly. Used when every score may
+     * have moved at once.
+     */
+    public function syncAll(): void
+    {
+        if ($this->rungs()->isEmpty()) {
+            return;
+        }
+
+        $after = 0;
+
+        do {
+            $result = $this->syncChunk($after, 1000);
+            $after = $result['lastId'];
+        } while (! $result['done']);
+    }
+
+    /**
      * How many members hold each rung right now, keyed by group id.
      *
      * @return array<int, int>
