@@ -209,9 +209,11 @@ alert at once.
 Every string is in `locale/en.yml`. Copy it to your language's code to
 translate.
 
-## Discuss
+## Support
 
-Questions, ideas and release notes: [Ladder on discuss.flarum.org](https://discuss.flarum.org/d/39974-ladder).
+- **Support forum:** [Ladder on ernestdefoe.online](https://ernestdefoe.online/d/104)
+- **Flarum community:** [Ladder on discuss.flarum.org](https://discuss.flarum.org/d/39974-ladder)
+- **Bug reports:** [GitHub issues](https://github.com/ernestdefoe/ladder/issues)
 
 ## Licence
 
