@@ -20,7 +20,7 @@
     "support": {
         "issues": "https://github.com/ernestdefoe/ladder/issues",
         "source": "https://github.com/ernestdefoe/ladder",
-        "forum": "https://discuss.flarum.org/d/39973"
+        "forum": "https://discuss.flarum.org/d/39974-ladder"
     },
     "require": {
         "php": "^8.3",
