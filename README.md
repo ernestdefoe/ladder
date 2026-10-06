@@ -209,6 +209,10 @@ alert at once.
 Every string is in `locale/en.yml`. Copy it to your language's code to
 translate.
 
+## Discuss
+
+Questions, ideas and release notes: [Ladder on discuss.flarum.org](https://discuss.flarum.org/d/39974-ladder).
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
