@@ -140,7 +140,13 @@ export default class RungModal extends FormModal<RungModalAttrs> {
           {existing && (
             <div className="Form-group">
               <label for="ladder-group">{t('existing_label')}</label>
-              <select id="ladder-group" name="groupId" className="FormControl" value={this.groupId()} onchange={(e: Event) => this.pickExisting((e.target as HTMLSelectElement).value)}>
+              <select
+                id="ladder-group"
+                name="groupId"
+                className="FormControl"
+                value={this.groupId()}
+                onchange={(e: Event) => this.pickExisting((e.target as HTMLSelectElement).value)}
+              >
                 <option value="" disabled>
                   {extractText(t('existing_placeholder'))}
                 </option>
@@ -203,7 +209,12 @@ export default class RungModal extends FormModal<RungModalAttrs> {
                 <label className="Button">
                   <i className="icon fas fa-upload Button-icon" aria-hidden="true" />
                   <span className="Button-label">{this.imagePreview ? t('image_replace') : t('image_choose')}</span>
-                  <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="LadderRungModal-file" onchange={(e: Event) => this.pickImage(e)} />
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="LadderRungModal-file"
+                    onchange={(e: Event) => this.pickImage(e)}
+                  />
                 </label>
                 {this.imagePreview && (
                   <Button className="Button Button--link" icon="fas fa-times" onclick={() => this.clearImage()}>

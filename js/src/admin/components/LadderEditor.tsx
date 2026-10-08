@@ -118,8 +118,7 @@ export default class LadderEditor extends Component {
           ))}
         </div>
         <div className="helpText">
-          {ladder.metric === 'posts' ? t('metric.help') : t('metric.help_' + ladder.metric)}{' '}
-          {ladder.metric === 'points' && t('metric.points_note')}
+          {ladder.metric === 'posts' ? t('metric.help') : t('metric.help_' + ladder.metric)} {ladder.metric === 'points' && t('metric.points_note')}
         </div>
         {this.switchedTo && <div className="LadderEditor-metricSwitched">{t('metric.switched', { metric: t('metric.' + this.switchedTo) })}</div>}
       </div>
@@ -152,11 +151,7 @@ export default class LadderEditor extends Component {
     }
 
     // Highest rank on top, the way a ladder is drawn.
-    return (
-      <ol className="LadderEditor-rungs">
-        {[...rungs].reverse().map((rung) => this.rungRow(rung))}
-      </ol>
-    );
+    return <ol className="LadderEditor-rungs">{[...rungs].reverse().map((rung) => this.rungRow(rung))}</ol>;
   }
 
   rungRow(rung: RungData) {

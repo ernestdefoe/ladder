@@ -1,5 +1,5 @@
 import app from 'flarum/forum/app';
-import Modal from 'flarum/common/components/Modal';
+import Modal, { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
@@ -11,8 +11,13 @@ const t = (name: string, params: Record<string, any> = {}) => app.translator.tra
 type Member = { id: number; displayName: string; avatarUrl: string | null; url: string; score: number };
 type MembersPage = { members: Member[]; total: number; nextOffset: number | null };
 
+interface RankMembersModalAttrs extends IInternalModalAttrs {
+  rung: RungData;
+  metric: Metric;
+}
+
 /** Who holds one rank, highest score first, thirty at a time. */
-export default class RankMembersModal extends Modal<{ rung: RungData; metric: Metric }> {
+export default class RankMembersModal extends Modal<RankMembersModalAttrs> {
   members: Member[] = [];
   total = 0;
   nextOffset: number | null = 0;

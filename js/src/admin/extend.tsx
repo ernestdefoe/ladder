@@ -59,7 +59,11 @@ export default [
 
               return (
                 <label className="checkbox LadderExempt-item">
-                  <input type="checkbox" checked={selected.includes(id)} onchange={(e: Event) => toggle(id, (e.target as HTMLInputElement).checked)} />
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(id)}
+                    onchange={(e: Event) => toggle(id, (e.target as HTMLInputElement).checked)}
+                  />
                   {group.namePlural()}
                 </label>
               );

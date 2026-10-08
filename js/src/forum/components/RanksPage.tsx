@@ -141,7 +141,10 @@ export default class RanksPage extends Page {
 
   rung(rung: RungData, isMine: boolean) {
     return (
-      <li className={classList('LadderRanks-rung', isMine && 'LadderRanks-rung--mine')} style={rung.color ? { '--ladder-color': rung.color } : undefined}>
+      <li
+        className={classList('LadderRanks-rung', isMine && 'LadderRanks-rung--mine')}
+        style={rung.color ? { '--ladder-color': rung.color } : undefined}
+      >
         <span className="LadderRanks-badge">
           <Badge icon={rung.icon || 'fas fa-circle'} color={rung.color || undefined} />
         </span>
