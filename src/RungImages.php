@@ -2,8 +2,8 @@
 
 namespace Ernestdefoe\Ladder;
 
-use Illuminate\Contracts\Filesystem\Factory;
 use Illuminate\Contracts\Filesystem\Cloud;
+use Illuminate\Contracts\Filesystem\Factory;
 use Intervention\Image\ImageManager;
 use Psr\Http\Message\UploadedFileInterface;
 

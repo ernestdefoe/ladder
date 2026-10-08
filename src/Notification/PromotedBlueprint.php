@@ -9,7 +9,7 @@ use Flarum\Notification\Blueprint\BlueprintInterface;
 use Flarum\User\User;
 
 /**
- * "You have reached the rank Teleadicto."
+ * "You have reached the rank Teleadicto.".
  *
  * 🚨 The subject is the GROUP, which already has an API resource in core.
  * Flarum asks for the API type of every notification subject when it lists
