@@ -3,7 +3,7 @@
 namespace Ernestdefoe\Ladder;
 
 use Illuminate\Contracts\Filesystem\Factory;
-use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Contracts\Filesystem\Cloud;
 use Intervention\Image\ImageManager;
 use Psr\Http\Message\UploadedFileInterface;
 
@@ -27,7 +27,7 @@ class RungImages
 
     public const ALLOWED = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
-    private Filesystem $disk;
+    private Cloud $disk;
 
     public function __construct(Factory $filesystem, private ImageManager $images)
     {

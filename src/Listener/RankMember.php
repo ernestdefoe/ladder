@@ -6,6 +6,7 @@ use Ernestdefoe\Ladder\Ladder;
 use Flarum\Post\Event\Deleted as PostDeleted;
 use Flarum\Post\Event\Posted;
 use Flarum\User\Event\Registered;
+use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
 
 /**
@@ -70,7 +71,7 @@ class RankMember
         }
     }
 
-    private function rank($user, bool $notify = true): void
+    private function rank(?User $user, bool $notify = true): void
     {
         if ($user) {
             $this->ladder->syncUser($user, $notify);

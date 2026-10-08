@@ -45,7 +45,8 @@ class RungMembers extends Controller
                 'displayName' => $user->display_name,
                 'avatarUrl' => $user->avatar_url,
                 'url' => $url->to('forum')->route('user', ['username' => $slugs->toSlug($user)]),
-                'score' => max(0, (int) $user->ladder_score),
+                // Selected under this alias by Ladder::membersOf().
+                'score' => max(0, (int) $user->getAttribute('ladder_score')),
             ])->values()->all(),
             'total' => $result['total'],
             'nextOffset' => $offset + self::PER_PAGE < $result['total'] ? $offset + self::PER_PAGE : null,
