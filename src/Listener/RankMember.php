@@ -2,12 +2,14 @@
 
 namespace Ernestdefoe\Ladder\Listener;
 
+use Ernestdefoe\Ladder\Job\SyncLadder;
 use Ernestdefoe\Ladder\Ladder;
 use Flarum\Post\Event\Deleted as PostDeleted;
 use Flarum\Post\Event\Posted;
 use Flarum\User\Event\Registered;
 use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Queue\Queue;
 
 /**
  * Re-ranks the one member whose post count just moved.
@@ -43,11 +45,12 @@ class RankMember
         }
 
         // A full recalculation can move anyone, so re-rank everyone, quietly,
-        // as the admin's own re-rank does.
+        // as the admin's own re-rank does. That walks every member, so it goes
+        // on the queue (run on the spot when the forum has no worker).
         if (class_exists(\HuseyinFiliz\Leaderboard\Event\PointsRecalculated::class)) {
             $events->listen(
                 \HuseyinFiliz\Leaderboard\Event\PointsRecalculated::class,
-                fn () => $this->ladder->metric() === 'points' ? $this->ladder->syncAll() : null
+                fn () => $this->ladder->metric() === 'points' ? $this->queueSync() : null
             );
         }
 
@@ -69,6 +72,13 @@ class RankMember
                 fn ($event) => $this->rank($event->post->user)
             );
         }
+    }
+
+    private function queueSync(): void
+    {
+        /** @var Queue $queue */
+        $queue = resolve(Queue::class);
+        $queue->push(new SyncLadder());
     }
 
     private function rank(?User $user, bool $notify = true): void

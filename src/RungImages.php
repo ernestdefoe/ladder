@@ -44,38 +44,26 @@ class RungImages
 
         // A fresh name per upload, so a browser holding the old picture in
         // its cache fetches the new one instead of showing it for a week.
-        $name = $this->prefix($rungId).bin2hex(random_bytes(4)).'.webp';
+        $name = 'ladder-rung-'.$rungId.'-'.bin2hex(random_bytes(4)).'.webp';
 
-        $this->forget($rungId);
         $this->disk->put($name, $encoded);
 
         return $name;
     }
 
     /**
-     * Remove every image belonging to a rung.
-     *
-     * Matched by prefix, not by the recorded path, so an upload that wrote its
-     * file and then failed before the row saved is swept up by the next one.
+     * Remove one stored image by the path the rung recorded. Deleting by path
+     * keeps this one call, however many files the assets disk holds.
      */
-    public function forget(int $rungId): void
+    public function forget(?string $path): void
     {
-        $prefix = $this->prefix($rungId);
-
-        foreach ($this->disk->files() as $file) {
-            if (str_starts_with(basename($file), $prefix)) {
-                $this->disk->delete($file);
-            }
+        if ($path) {
+            $this->disk->delete($path);
         }
     }
 
     public function url(?string $path): ?string
     {
         return $path ? $this->disk->url($path) : null;
-    }
-
-    private function prefix(int $rungId): string
-    {
-        return 'ladder-rung-'.$rungId.'-';
     }
 }

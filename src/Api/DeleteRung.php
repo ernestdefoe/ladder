@@ -21,8 +21,8 @@ class DeleteRung extends Controller
         $rung = $this->rung($request);
         $group = $rung->group;
 
-        resolve(\Ernestdefoe\Ladder\RungImages::class)->forget($rung->id);
         $rung->delete();
+        resolve(\Ernestdefoe\Ladder\RungImages::class)->forget($rung->image_path);
 
         if ($rung->owns_group && $group) {
             $group->delete();

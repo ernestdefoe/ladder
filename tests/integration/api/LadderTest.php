@@ -10,6 +10,8 @@ use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use Flarum\User\User;
 use PHPUnit\Framework\Attributes\Test;
+use Illuminate\Contracts\Filesystem\Factory;
+use Laminas\Diactoros\UploadedFile;
 use Psr\Http\Message\ResponseInterface;
 
 class LadderTest extends TestCase
@@ -147,6 +149,53 @@ class LadderTest extends TestCase
 
         $this->assertSame($groups, Group::query()->count(), 'No orphan group');
         $this->assertSame(3, $this->database()->table('ladder_rungs')->count());
+    }
+
+    #[Test]
+    public function a_new_picture_replaces_the_old_one_and_removing_it_leaves_no_file()
+    {
+        $disk = $this->app()->getContainer()->make(Factory::class)->disk('flarum-assets');
+        $upload = function (): ResponseInterface {
+            $png = tempnam(sys_get_temp_dir(), 'ladder');
+            $img = imagecreatetruecolor(4, 4);
+            imagepng($img, $png);
+
+            return $this->send($this->request('POST', '/api/ladder/rungs/2/image', ['authenticatedAs' => 1])
+                ->withUploadedFiles(['image' => new UploadedFile($png, filesize($png), UPLOAD_ERR_OK, 'r.png', 'image/png')]));
+        };
+        $path = fn () => $this->database()->table('ladder_rungs')->where('id', 2)->value('image_path');
+
+        $this->assertSame(200, $upload()->getStatusCode());
+        $first = $path();
+        $this->assertTrue($disk->exists($first));
+
+        $this->assertSame(200, $upload()->getStatusCode());
+        $second = $path();
+        $this->assertNotSame($first, $second);
+        $this->assertTrue($disk->exists($second));
+        $this->assertFalse($disk->exists($first), 'The old picture is deleted');
+
+        $text = tempnam(sys_get_temp_dir(), 'ladder');
+        file_put_contents($text, 'not an image');
+        $this->assertSame(422, $this->send($this->request('POST', '/api/ladder/rungs/2/image', ['authenticatedAs' => 1])
+            ->withUploadedFiles(['image' => new UploadedFile($text, 12, UPLOAD_ERR_OK, 'r.png', 'image/png')]))->getStatusCode(), 'A type sniffed from the file, not claimed');
+
+        $this->assertSame(200, $this->send($this->request('DELETE', '/api/ladder/rungs/2/image', ['authenticatedAs' => 1]))->getStatusCode());
+        $this->assertNull($path());
+        $this->assertFalse($disk->exists($second));
+    }
+
+    #[Test]
+    public function the_queued_full_re_rank_runs_on_a_forum_without_a_worker()
+    {
+        $this->app();
+        $before = $this->groupsOf(3);
+
+        // Flarum's default sync queue runs the job on the spot. Outside points
+        // mode it stands down and touches nobody.
+        $this->app()->getContainer()->make(\Illuminate\Contracts\Queue\Queue::class)->push(new \Ernestdefoe\Ladder\Job\SyncLadder());
+
+        $this->assertSame($before, $this->groupsOf(3));
     }
 
     #[Test]

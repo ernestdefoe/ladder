@@ -22,9 +22,10 @@ class RungImage extends Controller
         $images = resolve(RungImages::class);
 
         if ($request->getMethod() === 'DELETE') {
-            $images->forget($rung->id);
+            $old = $rung->image_path;
             $rung->image_path = null;
             $rung->save();
+            $images->forget($old);
 
             return $this->ladderPayload($actor);
         }
@@ -39,15 +40,29 @@ class RungImage extends Controller
             $this->fail('image_too_large');
         }
 
-        // The sniffed type, never the one the browser claims.
-        $type = (string) @mime_content_type($file->getStream()->getMetadata('uri'));
+        // The sniffed type, never the one the browser claims. Flarum's
+        // installer requires ext-fileinfo, so finfo is always there.
+        $type = (string) (new \finfo(FILEINFO_MIME_TYPE))->file($file->getStream()->getMetadata('uri'));
 
         if (! in_array($type, RungImages::ALLOWED, true)) {
             $this->fail('image_type');
         }
 
+        // Write the new file, record it, and only then drop the old one, so a
+        // failed save never leaves the rung pointing at a deleted picture,
+        // and the file it did write is cleaned up.
+        $old = $rung->image_path;
         $rung->image_path = $images->put($rung->id, $file);
-        $rung->save();
+
+        try {
+            $rung->save();
+        } catch (\Throwable $e) {
+            $images->forget($rung->image_path);
+
+            throw $e;
+        }
+
+        $images->forget($old);
 
         return $this->ladderPayload($actor);
     }
