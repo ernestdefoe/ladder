@@ -49,7 +49,8 @@
     },
     "require-dev": {
         "flarum/phpstan": "^2.0",
-        "flarum/testing": "^2.0"
+        "flarum/testing": "^2.0",
+        "antoinefr/flarum-ext-money": "^2.0"
     },
     "scripts": {
         "test": [

@@ -2,7 +2,7 @@ import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Badge from 'flarum/common/components/Badge';
 import Link from 'flarum/common/components/Link';
-import { unit, Standing } from '../../common/api';
+import { money, unit, Standing } from '../../common/api';
 
 const t = (name: string, params: Record<string, any> = {}) => app.translator.trans(`ernestdefoe-ladder.forum.profile.${name}`, params);
 
@@ -45,7 +45,7 @@ export default class LadderStanding extends Component<{ standing: Standing; user
           )}
         </div>
 
-        <div className="LadderStanding-score">{t(unit('score', metric), { count: score })}</div>
+        <div className="LadderStanding-score">{t(unit('score', metric), { count: score, amount: money(score) })}</div>
 
         {next ? (
           <>
@@ -60,7 +60,7 @@ export default class LadderStanding extends Component<{ standing: Standing; user
               <div className="LadderStanding-meterFill" style={{ width: `${percent}%` }} />
             </div>
             <div className="LadderStanding-next">
-              {t(unit(own ? 'next_own' : 'next', metric), { count: remaining, rank: <strong>{next.name}</strong>, name })}
+              {t(unit(own ? 'next_own' : 'next', metric), { count: remaining, amount: money(remaining), rank: <strong>{next.name}</strong>, name })}
             </div>
           </>
         ) : (

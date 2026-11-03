@@ -4,7 +4,7 @@ import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
 import stringToColor from 'flarum/common/utils/stringToColor';
-import { ladderApi, unit, Metric, RungData } from '../../common/api';
+import { ladderApi, money, unit, Metric, RungData } from '../../common/api';
 
 const t = (name: string, params: Record<string, any> = {}) => app.translator.trans(`ernestdefoe-ladder.forum.members.${name}`, params);
 
@@ -55,7 +55,7 @@ export default class RankMembersModal extends Modal<RankMembersModalAttrs> {
                   )}
                   <span className="LadderMembers-name">{member.displayName}</span>
                   <span className="LadderMembers-score">
-                    {app.translator.trans(`ernestdefoe-ladder.forum.members.${unit('score', metric)}`, { count: member.score })}
+                    {app.translator.trans(`ernestdefoe-ladder.forum.members.${unit('score', metric)}`, { count: member.score, amount: money(member.score) })}
                   </span>
                 </Link>
               </li>

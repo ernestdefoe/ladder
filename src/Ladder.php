@@ -41,6 +41,9 @@ class Ladder
 
     /** fof/gamification: a member's points live in `users.votes`. */
     private const GAMIFICATION = 'fof-gamification';
+
+    /** antoinefr/flarum-ext-money: a member's balance lives in `users.money`. */
+    private const MONEY = 'antoinefr-money';
     private const LEADERBOARD_TOTALS = 'leaderboard_user_totals';
 
     /** @var Collection<int, Rung>|null */
@@ -57,7 +60,8 @@ class Ladder
 
     /**
      * What the thresholds count: 'posts' (the default), 'points' from the
-     * Leaderboard extension, or 'votes', fof/gamification's points.
+     * Leaderboard extension, 'votes', fof/gamification's points, or 'money',
+     * the balance from antoinefr/flarum-ext-money.
      *
      * 🚨 Falls back to posts whenever the chosen extension is not enabled,
      * whatever the setting says. Disabling it must not leave every member
@@ -68,7 +72,22 @@ class Ladder
         return match ($this->settings->get(self::METRIC)) {
             'points' => $this->leaderboardAvailable() ? 'points' : 'posts',
             'votes' => $this->gamificationAvailable() ? 'votes' : 'posts',
+            'money' => $this->moneyAvailable() ? 'money' : 'posts',
             default => 'posts',
+        };
+    }
+
+    public function moneyAvailable(): bool
+    {
+        return $this->extensions->isEnabled(self::MONEY);
+    }
+
+    /** The `users` column a metric reads, for every metric but Leaderboard's. */
+    private function column(string $metric): string
+    {
+        return match ($metric) {
+            'votes', 'money' => $metric,
+            default => 'comment_count',
         };
     }
 
@@ -103,8 +122,9 @@ class Ladder
 
         // Read from the table, not the model: gamification updates the column
         // with a query, so the User object in hand can hold the old number.
-        if ($metric === 'votes') {
-            return max(0, (int) $this->db->table('users')->where('id', $user->id)->value('votes'));
+        // Money is a float; part of a coin never reaches a rung.
+        if ($metric !== 'posts') {
+            return max(0, (int) $this->db->table('users')->where('id', $user->id)->value($metric));
         }
 
         $user->refreshCommentCount();
@@ -271,7 +291,7 @@ class Ladder
                 ->where('id', '>', $afterId)
                 ->orderBy('id')
                 ->limit($limit)
-                ->get(['id', ($metric === 'votes' ? 'votes' : 'comment_count').' as score']);
+                ->get(['id', $this->column($metric).' as score']);
 
         if ($users->isEmpty()) {
             return ['processed' => 0, 'changed' => 0, 'lastId' => $afterId, 'done' => true];
@@ -364,7 +384,7 @@ class Ladder
         $metric = $this->metric();
         $score = match ($metric) {
             'points' => max(0, (int) $this->db->table(self::LEADERBOARD_TOTALS)->where('user_id', $user->id)->value('points_total')),
-            'votes' => max(0, (int) $this->db->table('users')->where('id', $user->id)->value('votes')),
+            'votes', 'money' => max(0, (int) $this->db->table('users')->where('id', $user->id)->value($metric)),
             default => (int) $user->comment_count,
         };
 
@@ -406,13 +426,16 @@ class Ladder
 
         $query->select('users.*');
 
-        match ($this->metric()) {
+        $metric = $this->metric();
+
+        match ($metric) {
             'points' => $query
                 ->leftJoin(self::LEADERBOARD_TOTALS, self::LEADERBOARD_TOTALS.'.user_id', '=', 'users.id')
                 ->addSelect(self::LEADERBOARD_TOTALS.'.points_total as ladder_score')
                 ->orderByDesc(self::LEADERBOARD_TOTALS.'.points_total'),
-            'votes' => $query->addSelect('users.votes as ladder_score')->orderByDesc('users.votes'),
-            default => $query->addSelect('users.comment_count as ladder_score')->orderByDesc('users.comment_count'),
+            default => $query
+                ->addSelect('users.'.$this->column($metric).' as ladder_score')
+                ->orderByDesc('users.'.$this->column($metric)),
         };
 
         $users = $query->orderBy('users.id')->offset($offset)->limit($limit)->get();

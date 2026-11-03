@@ -140,6 +140,7 @@ abstract class Controller implements RequestHandlerInterface
             // Only the admin page offers the choice, and only when it exists.
             'leaderboardAvailable' => $actor->isAdmin() && $this->ladder->leaderboardAvailable(),
             'gamificationAvailable' => $actor->isAdmin() && $this->ladder->gamificationAvailable(),
+            'moneyAvailable' => $actor->isAdmin() && $this->ladder->moneyAvailable(),
             'viewer' => $viewer,
             'banner' => [
                 // Empty means "use the forum's own title", decided by the

@@ -6,7 +6,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Badge from 'flarum/common/components/Badge';
 import extractText from 'flarum/common/utils/extractText';
 import classList from 'flarum/common/utils/classList';
-import { rangeLabel, unit, LadderData, RungData } from '../../common/api';
+import { money, rangeLabel, unit, LadderData, RungData } from '../../common/api';
 import LadderBanner from '../../common/components/LadderBanner';
 import { loadLadder } from '../ladderStore';
 import RankMembersModal from './RankMembersModal';
@@ -114,12 +114,12 @@ export default class RanksPage extends Page {
     return (
       <div className="LadderRanks-standing">
         <div className="LadderRanks-standingText">
-          {current && <p>{t(unit('your_rank', ladder.metric), { rank: <strong>{current.name}</strong>, count: viewer.score })}</p>}
+          {current && <p>{t(unit('your_rank', ladder.metric), { rank: <strong>{current.name}</strong>, count: viewer.score, amount: money(viewer.score) })}</p>}
           <p>
             {next
               ? current
-                ? t(unit('next', ladder.metric), { count: remaining, rank: <strong>{next.name}</strong> })
-                : t(unit('unranked', ladder.metric), { count: remaining, rank: <strong>{next.name}</strong> })
+                ? t(unit('next', ladder.metric), { count: remaining, amount: money(remaining), rank: <strong>{next.name}</strong> })
+                : t(unit('unranked', ladder.metric), { count: remaining, amount: money(remaining), rank: <strong>{next.name}</strong> })
               : t('top')}
           </p>
         </div>

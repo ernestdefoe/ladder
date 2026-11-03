@@ -64,6 +64,16 @@ class RankMember
             );
         }
 
+        // Money announces every change to a balance (its own rewards, an admin's
+        // edit, and add-ons such as Engagement Money that dispatch the same
+        // event), so in that mode the rank follows the balance instantly.
+        if (class_exists(\AntoineFr\Money\Event\MoneyUpdated::class)) {
+            $events->listen(
+                \AntoineFr\Money\Event\MoneyUpdated::class,
+                fn ($event) => $event->user && $this->ladder->metric() === 'money' ? $this->rank($event->user) : null
+            );
+        }
+
         // With Approval, a held post is private and does not count until a
         // moderator lets it through, so the promotion belongs to that moment.
         if (class_exists(\Flarum\Approval\Event\PostWasApproved::class)) {

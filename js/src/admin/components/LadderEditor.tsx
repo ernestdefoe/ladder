@@ -97,6 +97,7 @@ export default class LadderEditor extends Component {
     const options: Metric[] = ['posts'];
     if (ladder.leaderboardAvailable) options.push('points');
     if (ladder.gamificationAvailable) options.push('votes');
+    if (ladder.moneyAvailable) options.push('money');
 
     if (options.length < 2) return null;
 

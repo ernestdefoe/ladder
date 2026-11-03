@@ -145,12 +145,12 @@ glowing on that colour, and the posts it takes underneath.
   same *Search users* permission as Flarum's own member list), so a forum that
   keeps its membership private stays private.
 
-## Ranking by points instead of posts
+## Ranking by points or money instead of posts
 
-If you run [Leaderboard](https://discuss.flarum.org/d/38834) or
-[FoF Gamification](https://github.com/FriendsOfFlarum/gamification), the ladder
-page offers **Rank members by**: Posts, Leaderboard points or Gamification
-points. Pick one and everyone is re-ranked straight away; the thresholds stay
+If you run [Leaderboard](https://discuss.flarum.org/d/38834),
+[FoF Gamification](https://github.com/FriendsOfFlarum/gamification) or
+[Money](https://github.com/AntoineFr/flarum-ext-money), the ladder page offers
+**Rank members by**: Posts, Leaderboard points, Gamification points or Money. Pick one and everyone is re-ranked straight away; the thresholds stay
 as they are, so check they still make sense.
 
 - **Leaderboard points** count everything Leaderboard scores: posts, likes,
@@ -160,7 +160,14 @@ as they are, so check they still make sense.
   likes on their posts, show up on their next visit, still with no cron job.
 - **Gamification points** are the votes a member's posts have received. FoF
   Gamification announces every change, so ranks move the moment a vote is cast.
-- Members see "points" everywhere the page would otherwise say "posts".
+- **Money** is each member's balance from Money. Money announces every change,
+  including its add-ons that do the same (such as Engagement Money) and an
+  admin's edit, so a member joins, say, a VIP rung the moment their balance
+  reaches it. With **Move members down** off (the default) a rank stays after
+  the money is spent; turn it on if it should go with the money. Only whole
+  amounts count: 999.5 is short of a 1000 rung.
+- Members see "points" everywhere the page would otherwise say "posts". In
+  money mode they see amounts in your forum's own money name ("250 coins").
 - If the extension you chose is turned off, Ladder goes back to counting posts
   rather than treating everyone as having 0 points.
 

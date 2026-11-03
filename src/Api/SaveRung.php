@@ -105,7 +105,7 @@ class SaveRung extends Controller
     private function validMinPosts(mixed $value, Rung $rung): int
     {
         if (! is_numeric($value) || (int) $value < 0 || (int) $value != $value) {
-            $this->fail('minPosts', $this->ladder->metric() !== 'posts' ? 'min_points_invalid' : 'min_posts_invalid');
+            $this->fail('minPosts', 'min_'.$this->unit().'_invalid');
         }
 
         $value = (int) $value;
@@ -116,7 +116,7 @@ class SaveRung extends Controller
             ->exists();
 
         if ($taken) {
-            $this->fail('minPosts', $this->ladder->metric() !== 'posts' ? 'min_points_taken' : 'min_posts_taken', ['count' => $value]);
+            $this->fail('minPosts', 'min_'.$this->unit().'_taken', ['count' => $value]);
         }
 
         return $value;
@@ -150,6 +150,15 @@ class SaveRung extends Controller
         $value = trim((string) $value);
 
         return $value === '' ? null : mb_substr($value, 0, $max);
+    }
+
+    /** The word an error uses for the threshold: posts, points or money. */
+    private function unit(): string
+    {
+        return match ($this->ladder->metric()) {
+            'posts', 'money' => $this->ladder->metric(),
+            default => 'points',
+        };
     }
 
     /**
