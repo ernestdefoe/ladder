@@ -55,7 +55,10 @@ export default class RankMembersModal extends Modal<RankMembersModalAttrs> {
                   )}
                   <span className="LadderMembers-name">{member.displayName}</span>
                   <span className="LadderMembers-score">
-                    {app.translator.trans(`ernestdefoe-ladder.forum.members.${unit('score', metric)}`, { count: member.score, amount: money(member.score) })}
+                    {app.translator.trans(`ernestdefoe-ladder.forum.members.${unit('score', metric)}`, {
+                      count: member.score,
+                      amount: money(member.score),
+                    })}
                   </span>
                 </Link>
               </li>

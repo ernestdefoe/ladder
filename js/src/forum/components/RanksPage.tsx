@@ -114,7 +114,9 @@ export default class RanksPage extends Page {
     return (
       <div className="LadderRanks-standing">
         <div className="LadderRanks-standingText">
-          {current && <p>{t(unit('your_rank', ladder.metric), { rank: <strong>{current.name}</strong>, count: viewer.score, amount: money(viewer.score) })}</p>}
+          {current && (
+            <p>{t(unit('your_rank', ladder.metric), { rank: <strong>{current.name}</strong>, count: viewer.score, amount: money(viewer.score) })}</p>
+          )}
           <p>
             {next
               ? current
