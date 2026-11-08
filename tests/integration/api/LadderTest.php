@@ -9,9 +9,9 @@ use Flarum\Post\Post;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use Flarum\User\User;
-use PHPUnit\Framework\Attributes\Test;
 use Illuminate\Contracts\Filesystem\Factory;
 use Laminas\Diactoros\UploadedFile;
+use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 
 class LadderTest extends TestCase
