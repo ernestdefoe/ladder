@@ -11,6 +11,7 @@
  */
 
 use Ernestdefoe\Ladder\Api;
+use Ernestdefoe\Ladder\Console\SeedCommand;
 use Ernestdefoe\Ladder\Console\SyncCommand;
 use Ernestdefoe\Ladder\InheritPermissions;
 use Ernestdefoe\Ladder\Ladder;
@@ -77,7 +78,8 @@ return [
         ->permissionGroups(InheritPermissions::class),
 
     (new Extend\Console())
-        ->command(SyncCommand::class),
+        ->command(SyncCommand::class)
+        ->command(SeedCommand::class),
 
     (new Extend\Settings())
         ->default(Ladder::DEMOTE, false)

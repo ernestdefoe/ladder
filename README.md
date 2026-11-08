@@ -190,6 +190,54 @@ Switch it off if you want each rank's permissions to apply to that rank alone.
 
 ---
 
+## Seeding a ladder from a terminal
+
+A ladder is normally built in the admin panel, a rung at a time with a live
+preview. For a scripted install, a staging forum that should match production,
+or a ladder you would rather keep in version control, there is a console
+command:
+
+```bash
+php flarum ladder:seed
+```
+
+With no options it creates a plain six-rung starter ladder — Newcomer, Member,
+Regular, Contributor, Veteran, Legend — and ranks every member on it. Nobody is
+notified. Tune the thresholds afterwards under **Admin → Ladder**: the defaults
+guess at an average forum, and on a small one a ladder nobody can climb is just
+a badge.
+
+To seed your own ladder, describe it in a JSON file:
+
+```json
+[
+  { "name": "Newcomer", "minPosts": 0, "icon": "fas fa-seedling", "color": "#64748b", "description": "Just joined." },
+  { "name": "Regular", "minPosts": 50, "icon": "fas fa-comments", "color": "#10b981" },
+  { "name": "Veteran", "minPosts": 500, "icon": "fas fa-shield-halved", "color": "#f59e0b" }
+]
+```
+
+```bash
+php flarum ladder:seed --file=ladder.json
+```
+
+`name` and `minPosts` are required. `namePlural`, `icon`, `color` and
+`description` are optional, and every field is checked the same way the admin
+page checks it. Rungs may be listed in any order and are sorted by threshold
+for you. A file shaped `{"rungs": [...]}` is accepted too, so a ladder copied
+out of the `/api/ladder` response can be fed straight back in.
+
+| Option | |
+|---|---|
+| `--file=FILE`, `-f` | Seed from a JSON file instead of the starter ladder. |
+| `--dry-run` | Print the rungs that would be created and write nothing. |
+| `--force` | Add rungs even if the ladder already has some. Thresholds already taken are skipped. |
+
+Without `--force` the command refuses a forum that already has rungs, so it
+cannot quietly rearrange a ladder you built by hand. Each rung it creates owns
+its group, exactly as the admin page does, so removing that rung later removes
+the group with it.
+
 ## Re-ranking from a terminal
 
 The admin page re-ranks from the browser. For a large forum, or a scheduled
