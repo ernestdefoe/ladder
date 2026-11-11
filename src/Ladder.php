@@ -92,6 +92,20 @@ class Ladder
         return $this->extensions->isEnabled(self::RENOWN);
     }
 
+    /**
+     * Whether a rung threshold is one this ladder can use: a whole number, 0
+     * or more, and no higher than the metric can reach (Renown has 100
+     * levels). The rung editor and ladder:seed both ask here, so they can't drift.
+     */
+    public function validThreshold(mixed $value): bool
+    {
+        if (! is_numeric($value) || (int) $value < 0 || (int) $value != $value) {
+            return false;
+        }
+
+        return $this->metric() !== 'renown' || (int) $value <= 100;
+    }
+
     /** The `users` column a metric reads, for every metric but Leaderboard's. */
     private function column(string $metric): string
     {

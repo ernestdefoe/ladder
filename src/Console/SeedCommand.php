@@ -44,6 +44,12 @@ class SeedCommand extends AbstractCommand
         ['name' => 'Legend', 'minPosts' => 1500, 'icon' => 'fas fa-crown', 'color' => '#e11d48', 'description' => 'Part of the furniture.'],
     ];
 
+    /**
+     * The same six ranks at Renown levels: a member reaches Level 10 in about
+     * two weeks and Level 100 in about two years of steady activity.
+     */
+    private const RENOWN_LEVELS = [1, 10, 25, 50, 75, 100];
+
     public function __construct(
         private Ladder $ladder,
         private ConnectionInterface $db,
@@ -181,7 +187,7 @@ class SeedCommand extends AbstractCommand
     private function read(): array
     {
         $file = $this->input->getOption('file');
-        $raw = $file === null ? self::STARTER : $this->decode((string) $file);
+        $raw = $file === null ? $this->starter() : $this->decode((string) $file);
         $rungs = [];
         $seen = [];
 
@@ -200,8 +206,11 @@ class SeedCommand extends AbstractCommand
 
             $min = $rung['minPosts'] ?? null;
 
-            if (! is_numeric($min) || (int) $min != $min || (int) $min < 0) {
-                throw new \RuntimeException("Could not read {$at} ({$name}): \"minPosts\" must be a whole number, 0 or more.");
+            // The rung editor's own rule (Ladder::validThreshold), so a file can't seed a rung the editor would refuse.
+            if (! $this->ladder->validThreshold($min)) {
+                throw new \RuntimeException($this->ladder->metric() === 'renown'
+                    ? "Could not read {$at} ({$name}): \"minPosts\" is a Renown level here, a whole number from 0 to 100."
+                    : "Could not read {$at} ({$name}): \"minPosts\" must be a whole number, 0 or more.");
             }
 
             $min = (int) $min;
@@ -242,6 +251,21 @@ class SeedCommand extends AbstractCommand
         usort($rungs, fn (array $a, array $b) => $a['minPosts'] <=> $b['minPosts']);
 
         return $rungs;
+    }
+
+    /**
+     * The starter ladder in the ladder's own unit. Money is left out: what a
+     * rank should cost depends on each forum's economy, so it needs a file.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function starter(): array
+    {
+        return match ($this->ladder->metric()) {
+            'renown' => array_map(fn (array $rung, int $level) => ['minPosts' => $level] + $rung, self::STARTER, self::RENOWN_LEVELS),
+            'money' => throw new \RuntimeException('The starter ladder counts posts, and what a rank should cost depends on your forum\'s money. Describe your ladder in a JSON file and pass it with --file.'),
+            default => self::STARTER,
+        };
     }
 
     /**

@@ -145,12 +145,13 @@ glowing on that colour, and the posts it takes underneath.
   same *Search users* permission as Flarum's own member list), so a forum that
   keeps its membership private stays private.
 
-## Ranking by points or money instead of posts
+## Ranking by points, money or Renown level instead of posts
 
 If you run [Leaderboard](https://discuss.flarum.org/d/38834),
-[FoF Gamification](https://github.com/FriendsOfFlarum/gamification) or
-[Money](https://github.com/AntoineFr/flarum-ext-money), the ladder page offers
-**Rank members by**: Posts, Leaderboard points, Gamification points or Money. Pick one and everyone is re-ranked straight away; the thresholds stay
+[FoF Gamification](https://github.com/FriendsOfFlarum/gamification),
+[Money](https://github.com/AntoineFr/flarum-ext-money) or
+[Renown](https://github.com/ernestdefoe/renown), the ladder page offers
+**Rank members by**: Posts, Leaderboard points, Gamification points, Money or Renown level. Pick one and everyone is re-ranked straight away; the thresholds stay
 as they are, so check they still make sense.
 
 - **Leaderboard points** count everything Leaderboard scores: posts, likes,
@@ -166,6 +167,11 @@ as they are, so check they still make sense.
   reaches it. With **Move members down** off (the default) a rank stays after
   the money is spent; turn it on if it should go with the money. Only whole
   amounts count: 999.5 is short of a 1000 rung.
+- **Renown level** is each member's level (1 to 100) from Renown. Ranks move
+  the moment a member levels up; Renown's quiet changes (its history replay,
+  XP taken back) re-rank without a "promoted" alert. A threshold can't be above
+  100. A Prestige starts the climb again at level 1: turn on **Move members
+  down** if that should cost the rank too.
 - Members see "points" everywhere the page would otherwise say "posts". In
   money mode they see amounts in your forum's own money name ("250 coins").
 - If the extension you chose is turned off, Ladder goes back to counting posts
@@ -206,6 +212,12 @@ Regular, Contributor, Veteran, Legend — and ranks every member on it. Nobody i
 notified. Tune the thresholds afterwards under **Admin → Ladder**: the defaults
 guess at an average forum, and on a small one a ladder nobody can climb is just
 a badge.
+
+The starter ladder follows **Rank members by**: posts 0, 10, 50, 150, 500 and
+1500 (points use the same numbers), or Renown levels 1, 10, 25, 50, 75 and 100.
+When ranking by money it asks for a file instead, since what a rank should cost
+depends on your forum's money. Thresholds in a file are checked the way the rung
+editor checks them: a Renown level can't be above 100.
 
 To seed your own ladder, describe it in a JSON file:
 

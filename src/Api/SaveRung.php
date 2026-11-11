@@ -104,12 +104,8 @@ class SaveRung extends Controller
 
     private function validMinPosts(mixed $value, Rung $rung): int
     {
-        if (! is_numeric($value) || (int) $value < 0 || (int) $value != $value) {
+        if (! $this->ladder->validThreshold($value)) {
             $this->fail('minPosts', 'min_'.$this->unit().'_invalid');
-        }
-        // Renown has 100 levels: a rung past the top could never be reached.
-        if ($this->ladder->metric() === 'renown' && (int) $value > 100) {
-            $this->fail('minPosts', 'min_level_invalid');
         }
 
         $value = (int) $value;
