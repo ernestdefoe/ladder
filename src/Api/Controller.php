@@ -141,6 +141,7 @@ abstract class Controller implements RequestHandlerInterface
             'leaderboardAvailable' => $actor->isAdmin() && $this->ladder->leaderboardAvailable(),
             'gamificationAvailable' => $actor->isAdmin() && $this->ladder->gamificationAvailable(),
             'moneyAvailable' => $actor->isAdmin() && $this->ladder->moneyAvailable(),
+            'renownAvailable' => $actor->isAdmin() && $this->ladder->renownAvailable(),
             'viewer' => $viewer,
             'banner' => [
                 // Empty means "use the forum's own title", decided by the

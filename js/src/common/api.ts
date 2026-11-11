@@ -1,7 +1,7 @@
 import app from 'flarum/common/app';
 
-/** What the thresholds count: posts, Leaderboard's points, FoF Gamification's ('votes'), or Money's balance. */
-export type Metric = 'posts' | 'points' | 'votes' | 'money';
+/** What the thresholds count: posts, Leaderboard's points, FoF Gamification's ('votes'), Money's balance, or the Renown level. */
+export type Metric = 'posts' | 'points' | 'votes' | 'money' | 'renown';
 
 /**
  * A translation key in the ladder's unit: `next` stays `next` for posts and
@@ -11,6 +11,8 @@ export type Metric = 'posts' | 'points' | 'votes' | 'money';
  */
 export function unit(key: string, metric: Metric | undefined): string {
   if (!metric || metric === 'posts') return key;
+
+  if (metric === 'renown') return `${key}_level`;
 
   return metric === 'money' ? `${key}_money` : `${key}_points`;
 }
@@ -43,6 +45,7 @@ export type LadderData = {
   leaderboardAvailable: boolean;
   gamificationAvailable: boolean;
   moneyAvailable: boolean;
+  renownAvailable?: boolean;
   canListMembers: boolean;
   viewer: { score: number; groupId: number | null; exempt?: boolean } | null;
   banner: { title: string; tagline: string };

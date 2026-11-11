@@ -98,6 +98,7 @@ export default class LadderEditor extends Component {
     if (ladder.leaderboardAvailable) options.push('points');
     if (ladder.gamificationAvailable) options.push('votes');
     if (ladder.moneyAvailable) options.push('money');
+    if (ladder.renownAvailable) options.push('renown');
 
     if (options.length < 2) return null;
 

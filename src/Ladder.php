@@ -44,6 +44,9 @@ class Ladder
 
     /** antoinefr/flarum-ext-money: a member's balance lives in `users.money`. */
     private const MONEY = 'antoinefr-money';
+
+    /** ernestdefoe/renown: a member's level (1–100) lives in `users.renown_level`. */
+    private const RENOWN = 'ernestdefoe-renown';
     private const LEADERBOARD_TOTALS = 'leaderboard_user_totals';
 
     /** @var Collection<int, Rung>|null */
@@ -60,8 +63,9 @@ class Ladder
 
     /**
      * What the thresholds count: 'posts' (the default), 'points' from the
-     * Leaderboard extension, 'votes', fof/gamification's points, or 'money',
-     * the balance from antoinefr/flarum-ext-money.
+     * Leaderboard extension, 'votes', fof/gamification's points, 'money',
+     * the balance from antoinefr/flarum-ext-money, or 'renown', the member's
+     * Renown level.
      *
      * 🚨 Falls back to posts whenever the chosen extension is not enabled,
      * whatever the setting says. Disabling it must not leave every member
@@ -73,6 +77,7 @@ class Ladder
             'points' => $this->leaderboardAvailable() ? 'points' : 'posts',
             'votes' => $this->gamificationAvailable() ? 'votes' : 'posts',
             'money' => $this->moneyAvailable() ? 'money' : 'posts',
+            'renown' => $this->renownAvailable() ? 'renown' : 'posts',
             default => 'posts',
         };
     }
@@ -82,11 +87,17 @@ class Ladder
         return $this->extensions->isEnabled(self::MONEY);
     }
 
+    public function renownAvailable(): bool
+    {
+        return $this->extensions->isEnabled(self::RENOWN);
+    }
+
     /** The `users` column a metric reads, for every metric but Leaderboard's. */
     private function column(string $metric): string
     {
         return match ($metric) {
             'votes', 'money' => $metric,
+            'renown' => 'renown_level',
             default => 'comment_count',
         };
     }
@@ -124,7 +135,7 @@ class Ladder
         // with a query, so the User object in hand can hold the old number.
         // Money is a float; part of a coin never reaches a rung.
         if ($metric !== 'posts') {
-            return max(0, (int) $this->db->table('users')->where('id', $user->id)->value($metric));
+            return max(0, (int) $this->db->table('users')->where('id', $user->id)->value($this->column($metric)));
         }
 
         $user->refreshCommentCount();
@@ -384,7 +395,7 @@ class Ladder
         $metric = $this->metric();
         $score = match ($metric) {
             'points' => max(0, (int) $this->db->table(self::LEADERBOARD_TOTALS)->where('user_id', $user->id)->value('points_total')),
-            'votes', 'money' => max(0, (int) $this->db->table('users')->where('id', $user->id)->value($metric)),
+            'votes', 'money', 'renown' => max(0, (int) $this->db->table('users')->where('id', $user->id)->value($this->column($metric))),
             default => (int) $user->comment_count,
         };
 

@@ -285,6 +285,7 @@ class SeedCommand extends AbstractCommand
     {
         return match ($this->ladder->metric()) {
             'posts', 'money' => $this->ladder->metric(),
+            'renown' => 'level',
             default => 'points',
         };
     }

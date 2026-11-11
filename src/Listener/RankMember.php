@@ -74,6 +74,15 @@ class RankMember
             );
         }
 
+        // Renown announces every level change. A quiet one (its history replay, XP taken back)
+        // re-ranks without an alert, as the admin's own re-rank does.
+        if (class_exists(\ErnestDefoe\Renown\Event\LevelChanged::class)) {
+            $events->listen(
+                \ErnestDefoe\Renown\Event\LevelChanged::class,
+                fn ($event) => $this->ladder->metric() === 'renown' ? $this->rank($event->user, ! $event->quiet) : null
+            );
+        }
+
         // With Approval, a held post is private and does not count until a
         // moderator lets it through, so the promotion belongs to that moment.
         if (class_exists(\Flarum\Approval\Event\PostWasApproved::class)) {

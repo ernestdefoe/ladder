@@ -107,6 +107,10 @@ class SaveRung extends Controller
         if (! is_numeric($value) || (int) $value < 0 || (int) $value != $value) {
             $this->fail('minPosts', 'min_'.$this->unit().'_invalid');
         }
+        // Renown has 100 levels: a rung past the top could never be reached.
+        if ($this->ladder->metric() === 'renown' && (int) $value > 100) {
+            $this->fail('minPosts', 'min_level_invalid');
+        }
 
         $value = (int) $value;
 
@@ -157,6 +161,7 @@ class SaveRung extends Controller
     {
         return match ($this->ladder->metric()) {
             'posts', 'money' => $this->ladder->metric(),
+            'renown' => 'level',
             default => 'points',
         };
     }
