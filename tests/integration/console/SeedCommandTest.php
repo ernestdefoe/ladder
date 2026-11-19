@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\Test;
  */
 class SeedCommandTest extends ConsoleTestCase
 {
+    use \Ernestdefoe\Ladder\Tests\integration\MoneyMigration;
     use RetrievesAuthorizedUsers;
 
     private string $file = '';
@@ -137,6 +138,7 @@ class SeedCommandTest extends ConsoleTestCase
         if (! in_array(getenv('DB_DRIVER') ?: 'mysql', ['mysql', 'mariadb'], true)) {
             $this->markTestSkipped("Money's migration installs on MySQL and MariaDB only.");
         }
+        $this->skipUnlessMoneyInstalls();
         $this->extension('antoinefr-money');
         $this->setting('ernestdefoe-ladder.metric', 'money');
 

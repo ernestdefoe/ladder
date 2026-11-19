@@ -14,15 +14,12 @@ use PHPUnit\Framework\Attributes\Test;
 /** Ranks by a member's balance from antoinefr/flarum-ext-money: "1000 money makes you VIP". */
 class MoneyTest extends TestCase
 {
+    use \Ernestdefoe\Ladder\Tests\integration\MoneyMigration;
     use RetrievesAuthorizedUsers;
 
     protected function setUp(): void
     {
-        // Money's own migration adds a NOT NULL column with no default, which
-        // only MySQL and MariaDB accept on a table that already has rows.
-        if (! in_array(getenv('DB_DRIVER') ?: 'mysql', ['mysql', 'mariadb'], true)) {
-            $this->markTestSkipped("Money's migration installs on MySQL and MariaDB only.");
-        }
+        $this->skipUnlessMoneyInstalls();
 
         parent::setUp();
 
