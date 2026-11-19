@@ -3,22 +3,26 @@ import Modal, { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
-import stringToColor from 'flarum/common/utils/stringToColor';
-import { ladderApi, money, unit, Metric, RungData } from '../../common/api';
+import Avatar from 'flarum/common/components/Avatar';
+import type User from 'flarum/common/models/User';
+import { money, unit, Metric, RungData } from '../../common/api';
 
 const t = (name: string, params: Record<string, any> = {}) => app.translator.trans(`ernestdefoe-ladder.forum.members.${name}`, params);
 
-type Member = { id: number; displayName: string; avatarUrl: string | null; url: string; score: number };
-type MembersPage = { members: Member[]; total: number; nextOffset: number | null };
+const PER_PAGE = 30;
 
 interface RankMembersModalAttrs extends IInternalModalAttrs {
   rung: RungData;
   metric: Metric;
 }
 
-/** Who holds one rank, highest score first, thirty at a time. */
+/**
+ * Who holds one rank, highest score first, thirty at a time: core's member
+ * list, narrowed by the `ladderRung` filter, so its permission and visibility
+ * rules apply.
+ */
 export default class RankMembersModal extends Modal<RankMembersModalAttrs> {
-  members: Member[] = [];
+  members: User[] = [];
   total = 0;
   nextOffset: number | null = 0;
   loading = false;
@@ -44,20 +48,14 @@ export default class RankMembersModal extends Modal<RankMembersModalAttrs> {
         {this.members.length > 0 && (
           <ol className="LadderMembers">
             {this.members.map((member) => (
-              <li className="LadderMembers-item" key={member.id}>
-                <Link href={member.url} className="LadderMembers-link" onclick={() => this.hide()}>
-                  {member.avatarUrl ? (
-                    <img className="Avatar LadderMembers-avatar" src={member.avatarUrl} alt="" loading="lazy" />
-                  ) : (
-                    <span className="Avatar LadderMembers-avatar" style={{ '--avatar-bg': '#' + stringToColor(member.displayName) }}>
-                      {member.displayName.charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                  <span className="LadderMembers-name">{member.displayName}</span>
+              <li className="LadderMembers-item" key={member.id()}>
+                <Link href={app.route.user(member)} className="LadderMembers-link" onclick={() => this.hide()}>
+                  <Avatar user={member} className="LadderMembers-avatar" loading="lazy" />
+                  <span className="LadderMembers-name">{member.displayName()}</span>
                   <span className="LadderMembers-score">
                     {app.translator.trans(`ernestdefoe-ladder.forum.members.${unit('score', metric)}`, {
-                      count: member.score,
-                      amount: money(member.score),
+                      count: member.attribute<number>('ladderScore') ?? 0,
+                      amount: money(member.attribute<number>('ladderScore') ?? 0),
                     })}
                   </span>
                 </Link>
@@ -87,11 +85,14 @@ export default class RankMembersModal extends Modal<RankMembersModalAttrs> {
     this.loading = true;
     m.redraw();
 
-    ladderApi<MembersPage>('GET', `/rungs/${this.attrs.rung.id}/members`, undefined, { params: { offset: this.nextOffset } })
-      .then((page) => {
-        this.members.push(...page.members);
-        this.total = page.total;
-        this.nextOffset = page.nextOffset;
+    const offset = this.nextOffset;
+
+    app.store
+      .find<User[]>('users', { filter: { ladderRung: String(this.attrs.rung.id) }, sort: '-ladderScore', page: { offset, limit: PER_PAGE } })
+      .then((users) => {
+        this.members.push(...users);
+        this.total = users.payload?.meta?.page?.total ?? this.members.length;
+        this.nextOffset = users.payload?.links?.next ? offset + PER_PAGE : null;
       })
       .catch(() => {
         this.nextOffset = null;

@@ -6,7 +6,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Badge from 'flarum/common/components/Badge';
 import extractText from 'flarum/common/utils/extractText';
 import classList from 'flarum/common/utils/classList';
-import { money, rangeLabel, unit, LadderData, RungData } from '../../common/api';
+import { money, progressPercent, rangeLabel, unit, LadderData, RungData } from '../../common/api';
 import LadderBanner from '../../common/components/LadderBanner';
 import { loadLadder } from '../ladderStore';
 import RankMembersModal from './RankMembersModal';
@@ -79,6 +79,20 @@ export default class RanksPage extends Page {
   }
 
   /** The reader's own place on the ladder, and how far it is to the next rung. */
+  /** "You're a Regular with 60 posts. 40 more to reach Contributor." */
+  standingText(ladder: LadderData, current: RungData | null, next: RungData | null) {
+    const score = ladder.viewer!.score;
+    const remaining = next ? next.minPosts - score : 0;
+    const reach = { count: remaining, amount: money(remaining), rank: <strong>{next?.name}</strong> };
+
+    return (
+      <div className="LadderRanks-standingText">
+        {current && <p>{t(unit('your_rank', ladder.metric), { rank: <strong>{current.name}</strong>, count: score, amount: money(score) })}</p>}
+        <p>{next ? t(unit(current ? 'next' : 'unranked', ladder.metric), reach) : t('top')}</p>
+      </div>
+    );
+  }
+
   standing(ladder: LadderData) {
     const viewer = ladder.viewer;
 
@@ -99,32 +113,11 @@ export default class RanksPage extends Page {
     const floor = current ? current.minPosts : -1;
     const next = rungs.find((rung) => rung.minPosts > floor && rung.minPosts > viewer.score) ?? null;
 
-    let percent = 100;
-
-    if (next) {
-      // A member can hold a rank above their own count (demotion off, a
-      // threshold raised), so measure from whichever is lower.
-      const from = Math.min(current ? current.minPosts : 0, viewer.score);
-      const span = Math.max(1, next.minPosts - from);
-      percent = Math.max(0, Math.min(100, Math.round(((viewer.score - from) / span) * 100)));
-    }
-
-    const remaining = next ? next.minPosts - viewer.score : 0;
+    const percent = progressPercent(viewer.score, current?.minPosts ?? null, next?.minPosts ?? null);
 
     return (
       <div className="LadderRanks-standing">
-        <div className="LadderRanks-standingText">
-          {current && (
-            <p>{t(unit('your_rank', ladder.metric), { rank: <strong>{current.name}</strong>, count: viewer.score, amount: money(viewer.score) })}</p>
-          )}
-          <p>
-            {next
-              ? current
-                ? t(unit('next', ladder.metric), { count: remaining, amount: money(remaining), rank: <strong>{next.name}</strong> })
-                : t(unit('unranked', ladder.metric), { count: remaining, amount: money(remaining), rank: <strong>{next.name}</strong> })
-              : t('top')}
-          </p>
-        </div>
+        {this.standingText(ladder, current, next)}
         {next && (
           <div
             className="LadderRanks-meter"

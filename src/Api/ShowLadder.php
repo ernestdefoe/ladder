@@ -2,21 +2,32 @@
 
 namespace Ernestdefoe\Ladder\Api;
 
-use Flarum\User\User;
+use Ernestdefoe\Ladder\LadderPayload;
+use Flarum\Http\RequestUtil;
+use Laminas\Diactoros\Response\JsonResponse;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * The public ladder, for the Ranks page. Guests can read it: a ladder is
- * something to show a visitor before they join, not after.
+ * The whole ladder for the Ranks page and the admin editor. Guests can read
+ * it: a ladder is something to show a visitor before they join, not after.
+ *
+ * A plain handler, not a resource endpoint: the answer is one computed view
+ * (every rung with its range and member count, and where the reader stands),
+ * not a list of records.
  */
-class ShowLadder extends Controller
+class ShowLadder implements RequestHandlerInterface
 {
-    protected bool $adminOnly = false;
-
-    protected function respond(ServerRequestInterface $request, User $actor): mixed
+    public function __construct(private LadderPayload $payload)
     {
+    }
+
+    public function handle(ServerRequestInterface $request): ResponseInterface
+    {
+        $actor = RequestUtil::getActor($request);
         $actor->assertCan('viewForum');
 
-        return $this->ladderPayload($actor);
+        return new JsonResponse($this->payload->for($actor));
     }
 }

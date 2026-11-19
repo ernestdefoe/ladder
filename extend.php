@@ -1,32 +1,33 @@
 <?php
 
 /*
- * Ladder: post-count ranks, one rung at a time.
+ * Ladder: ranks, one rung at a time.
  *
  * Each rung is an ordinary Flarum group with a threshold: posts by default, or
- * points from huseyinfiliz/leaderboard. A member holds
- * exactly one rung group, the one their post count has earned, and moves up
+ * points, votes, money or a Renown level from another extension. A member
+ * holds exactly one rung group, the one their score has earned, and moves up
  * when they cross the next threshold. Every other group they belong to is
  * left alone.
  */
 
 use Ernestdefoe\Ladder\Api;
+use Ernestdefoe\Ladder\Search;
 use Ernestdefoe\Ladder\Console\SeedCommand;
 use Ernestdefoe\Ladder\Console\SyncCommand;
 use Ernestdefoe\Ladder\InheritPermissions;
-use Ernestdefoe\Ladder\Ladder;
 use Ernestdefoe\Ladder\Listener\RankMember;
 use Ernestdefoe\Ladder\Middleware\RecheckActiveMember;
 use Ernestdefoe\Ladder\Notification\PromotedBlueprint;
-use Flarum\Api\Context;
 use Flarum\Api\Resource\UserResource;
-use Flarum\Api\Schema;
 use Flarum\Extend;
-use Flarum\User\User;
+use Flarum\Search\Database\DatabaseSearchDriver;
+use Flarum\User\Search\UserSearcher;
 
 return [
     (new Extend\Frontend('forum'))
         ->js(__DIR__.'/js/dist/forum.js')
+        // 🚨 Not optional: the Ranks page is a chunk in here, and undeclared chunks 404.
+        ->jsDirectory(__DIR__.'/js/dist/forum')
         ->css(__DIR__.'/less/common.less')
         ->css(__DIR__.'/less/forum.less')
         ->route('/ranks', 'ladder.ranks'),
@@ -38,34 +39,27 @@ return [
 
     new Extend\Locales(__DIR__.'/locale'),
 
+    // Rungs are created, edited and removed through their resource.
+    new Extend\ApiResource(Api\Resource\RungResource::class),
+
+    // Plain handlers, each for something that isn't a record: the computed
+    // ladder, a re-rank slice, and a file upload. See each class.
     (new Extend\Routes('api'))
         ->get('/ladder', 'ladder.show', Api\ShowLadder::class)
-        ->post('/ladder/rungs', 'ladder.rungs.create', Api\SaveRung::class)
-        ->patch('/ladder/rungs/{id}', 'ladder.rungs.update', Api\SaveRung::class)
-        ->delete('/ladder/rungs/{id}', 'ladder.rungs.delete', Api\DeleteRung::class)
-        ->post('/ladder/rungs/{id}/image', 'ladder.rungs.image', Api\RungImage::class)
-        ->delete('/ladder/rungs/{id}/image', 'ladder.rungs.image.delete', Api\RungImage::class)
         ->post('/ladder/sync', 'ladder.sync', Api\SyncLadder::class)
-        ->get('/ladder/rungs/{id}/members', 'ladder.rungs.members', Api\RungMembers::class),
+        ->post('/ladder/rungs/{id}/image', 'ladder.rungs.image', Api\UploadRungImage::class)
+        ->delete('/ladder/rungs/{id}/image', 'ladder.rungs.image.delete', Api\DeleteRungImage::class),
 
-    /*
-     * A member's standing, for their profile. Only on the profile's own
-     * request: computing it for every user in a list would be a query per
-     * member on every discussion page.
-     */
+    // A rank's members: /api/users?filter[ladderRung]=<id>&sort=-ladderScore.
     (new Extend\ApiResource(UserResource::class))
-        ->fields(fn () => [
-            Schema\Arr::make('ladderStanding')
-                ->visible(fn (User $user, Context $context) => $context->showing(UserResource::class))
-                ->get(fn (User $user, Context $context) => resolve(Ladder::class)->standing($user, $context->getActor())),
-        ]),
+        ->fields(Api\UserStanding::class)
+        ->sorts(Api\LadderScoreSort::class),
+
+    (new Extend\SearchDriver(DatabaseSearchDriver::class))
+        ->addFilter(UserSearcher::class, Search\RungFilter::class),
 
     (new Extend\Event())
         ->subscribe(RankMember::class),
-
-    // Points mode: re-rank a member as they use the forum. See the class.
-    (new Extend\Middleware('forum'))->add(RecheckActiveMember::class),
-    (new Extend\Middleware('api'))->add(RecheckActiveMember::class),
 
     // 🚨 Alert only. A promotion is worth a badge lighting up; an email for
     // each one teaches members to filter the forum's mail.
@@ -81,13 +75,40 @@ return [
         ->command(SyncCommand::class)
         ->command(SeedCommand::class),
 
+    // 🚨 String literals, not Ladder:: constants: extend.php runs while a
+    // deploy swaps vendor/, and a class constant read here fatals every
+    // request until it finishes.
     (new Extend\Settings())
-        ->default(Ladder::DEMOTE, false)
-        ->default(Ladder::EXEMPT_GROUPS, '[]')
-        ->default(Ladder::SHOW_NAV, true)
-        ->default(InheritPermissions::SETTING, true)
-        ->default(Ladder::BANNER_ON_INDEX, false)
-        ->default(Ladder::METRIC, 'posts')
-        ->serializeToForum('ladderShowNav', Ladder::SHOW_NAV, 'boolval')
-        ->serializeToForum('ladderBannerOnIndex', Ladder::BANNER_ON_INDEX, 'boolval'),
+        ->default('ernestdefoe-ladder.demote', false)
+        ->default('ernestdefoe-ladder.exempt_groups', '[]')
+        ->default('ernestdefoe-ladder.show_nav', true)
+        ->default('ernestdefoe-ladder.inherit_permissions', true)
+        ->default('ernestdefoe-ladder.banner_on_index', false)
+        ->default('ernestdefoe-ladder.metric', 'posts')
+        ->serializeToForum('ladderShowNav', 'ernestdefoe-ladder.show_nav', 'boolval')
+        ->serializeToForum('ladderBannerOnIndex', 'ernestdefoe-ladder.banner_on_index', 'boolval'),
+
+    // The other extensions a ladder can rank by, each wired only while it is
+    // enabled. Ladder falls back to post counts when the chosen one is off.
+    (new Extend\Conditional())
+        ->whenExtensionEnabled('huseyinfiliz-leaderboard', fn () => [
+            (new Extend\Event())
+                ->listen(\HuseyinFiliz\Leaderboard\Event\PointsUpdated::class, [RankMember::class, 'pointsUpdated'])
+                ->listen(\HuseyinFiliz\Leaderboard\Event\PointsRecalculated::class, [RankMember::class, 'pointsRecalculated']),
+            // Points mode: re-rank a member as they use the forum. See the class.
+            (new Extend\Middleware('forum'))->add(RecheckActiveMember::class),
+            (new Extend\Middleware('api'))->add(RecheckActiveMember::class),
+        ])
+        ->whenExtensionEnabled('fof-gamification', fn () => [
+            (new Extend\Event())->listen(\FoF\Gamification\Events\UserPointsUpdated::class, [RankMember::class, 'votesUpdated']),
+        ])
+        ->whenExtensionEnabled('antoinefr-money', fn () => [
+            (new Extend\Event())->listen(\AntoineFr\Money\Event\MoneyUpdated::class, [RankMember::class, 'moneyUpdated']),
+        ])
+        ->whenExtensionEnabled('ernestdefoe-renown', fn () => [
+            (new Extend\Event())->listen(\ErnestDefoe\Renown\Event\LevelChanged::class, [RankMember::class, 'levelChanged']),
+        ])
+        ->whenExtensionEnabled('flarum-approval', fn () => [
+            (new Extend\Event())->listen(\Flarum\Approval\Event\PostWasApproved::class, [RankMember::class, 'postApproved']),
+        ]),
 ];

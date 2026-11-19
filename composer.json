@@ -44,7 +44,14 @@
                 "name": "fas fa-stairs",
                 "backgroundColor": "#7c3aed",
                 "color": "#fff"
-            }
+            },
+            "optional-dependencies": [
+                "huseyinfiliz-leaderboard",
+                "fof-gamification",
+                "antoinefr-money",
+                "ernestdefoe-renown",
+                "flarum-approval"
+            ]
         }
     },
     "require-dev": {
@@ -52,6 +59,13 @@
         "flarum/testing": "^2.0",
         "antoinefr/flarum-ext-money": "^2.0",
         "ernestdefoe/renown": "^1.0"
+    },
+    "suggest": {
+        "huseyinfiliz/leaderboard": "Rank members by their Leaderboard points.",
+        "fof/gamification": "Rank members by their votes.",
+        "antoinefr/flarum-ext-money": "Rank members by their money balance.",
+        "ernestdefoe/renown": "Rank members by their Renown level.",
+        "flarum/approval": "Count a held post once a moderator approves it."
     },
     "scripts": {
         "test": [

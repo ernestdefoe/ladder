@@ -9,6 +9,7 @@ use Flarum\Console\AbstractCommand;
 use Flarum\Group\Group;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Filesystem\Filesystem;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputOption;
 
@@ -54,6 +55,7 @@ class SeedCommand extends AbstractCommand
         private Ladder $ladder,
         private ConnectionInterface $db,
         private Cache $cache,
+        private Filesystem $files,
     ) {
         parent::__construct();
     }
@@ -91,31 +93,7 @@ class SeedCommand extends AbstractCommand
             return 1;
         }
 
-        /*
-         * 🚨 A threshold is a rung's place on the ladder, so two rungs can
-         * never share one. Under --force the ones already taken are skipped
-         * rather than refused: the command is then worth running twice, once
-         * to lay the ladder down and again after adding a rung to the file.
-         */
-        // 🚨 Straight from the table, not from the loaded ladder: rungs()
-        // drops any rung whose group has gone, and a threshold held by one of
-        // those is still taken as far as the ladder's own rule is concerned.
-        $taken = Rung::query()->pluck('min_posts')->map(fn ($n) => (int) $n)->all();
-        $skipped = [];
-
-        $rungs = array_values(array_filter($rungs, function (array $rung) use ($taken, &$skipped) {
-            if (in_array($rung['minPosts'], $taken, true)) {
-                $skipped[] = $rung;
-
-                return false;
-            }
-
-            return true;
-        }));
-
-        foreach ($skipped as $rung) {
-            $this->info(sprintf('Skipping %s: a rung at %d %s already exists.', $rung['name'], $rung['minPosts'], $this->unit()));
-        }
+        $rungs = $this->withoutTaken($rungs);
 
         if (! $rungs) {
             $this->info('Nothing left to create.');
@@ -124,20 +102,66 @@ class SeedCommand extends AbstractCommand
         }
 
         if ($this->input->getOption('dry-run')) {
-            $this->info('Would create these rungs (--dry-run, nothing written):');
-
-            // 🚨 Symfony's own table: AbstractCommand has no table() helper.
-            (new Table($this->output))
-                ->setHeaders(['Rank', ucfirst($this->unit()), 'Icon', 'Colour'])
-                ->setRows(array_map(
-                    fn (array $r) => [$r['name'], (string) $r['minPosts'], $r['icon'] ?? '—', $r['color'] ?? '—'],
-                    $rungs,
-                ))
-                ->render();
+            $this->preview($rungs);
 
             return 0;
         }
 
+        $this->create($rungs);
+
+        return 0;
+    }
+
+    /**
+     * 🚨 A threshold is a rung's place on the ladder, so two rungs can never
+     * share one. Under --force the ones already taken are skipped rather than
+     * refused: the command is then worth running twice, once to lay the ladder
+     * down and again after adding a rung to the file.
+     *
+     * @param list<array<string, mixed>> $rungs
+     * @return list<array<string, mixed>>
+     */
+    private function withoutTaken(array $rungs): array
+    {
+        // 🚨 Straight from the table, not from the loaded ladder: rungs()
+        // drops any rung whose group has gone, and a threshold held by one of
+        // those is still taken as far as the ladder's own rule is concerned.
+        $taken = Rung::query()->pluck('min_posts')->map(fn ($n) => (int) $n)->all();
+
+        return array_values(array_filter($rungs, function (array $rung) use ($taken) {
+            if (! in_array($rung['minPosts'], $taken, true)) {
+                return true;
+            }
+
+            $this->info(sprintf('Skipping %s: a rung at %d %s already exists.', $rung['name'], $rung['minPosts'], $this->ladder->unit()));
+
+            return false;
+        }));
+    }
+
+    /** @param list<array<string, mixed>> $rungs */
+    private function preview(array $rungs): void
+    {
+        $this->info('Would create these rungs (--dry-run, nothing written):');
+
+        // 🚨 Symfony's own table: AbstractCommand has no table() helper.
+        (new Table($this->output))
+            ->setHeaders(['Rank', ucfirst($this->ladder->unit()), 'Icon', 'Color'])
+            ->setRows(array_map(
+                fn (array $r) => [$r['name'], (string) $r['minPosts'], $r['icon'] ?? '—', $r['color'] ?? '—'],
+                $rungs,
+            ))
+            ->render();
+    }
+
+    /**
+     * Each rung with a group of its own, all in one transaction, then every
+     * member ranked on the new ladder.
+     *
+     * @param list<array<string, mixed>> $rungs
+     */
+    private function create(array $rungs): void
+    {
         $this->db->transaction(function () use ($rungs) {
             foreach ($rungs as $rung) {
                 $group = new Group();
@@ -174,8 +198,6 @@ class SeedCommand extends AbstractCommand
 
         $this->info('Ranked every member on it. Nobody was notified.');
         $this->info('Check the thresholds against your forum in Admin → Ladder — a ladder nobody can climb is just a badge.');
-
-        return 0;
     }
 
     /**
@@ -193,54 +215,13 @@ class SeedCommand extends AbstractCommand
 
         foreach ($raw as $i => $rung) {
             $at = $file === null ? "rung {$i}" : "rung {$i} of {$file}";
+            $entry = $this->validRung($rung, $at);
 
-            if (! is_array($rung)) {
-                throw new \RuntimeException("Could not read {$at}: each rung must be an object.");
+            if (in_array($entry['minPosts'], $seen, true)) {
+                throw new \RuntimeException("Could not read {$at} ({$entry['name']}): two rungs both sit at {$entry['minPosts']} {$this->ladder->unit()}, and a threshold is what puts a rung in its place.");
             }
 
-            $name = trim((string) ($rung['name'] ?? ''));
-
-            if ($name === '' || mb_strlen($name) > 100) {
-                throw new \RuntimeException("Could not read {$at}: give the rank a name, up to 100 characters.");
-            }
-
-            $min = $rung['minPosts'] ?? null;
-
-            // The rung editor's own rule (Ladder::validThreshold), so a file can't seed a rung the editor would refuse.
-            if (! $this->ladder->validThreshold($min)) {
-                throw new \RuntimeException($this->ladder->metric() === 'renown'
-                    ? "Could not read {$at} ({$name}): \"minPosts\" is a Renown level here, a whole number from 0 to 100."
-                    : "Could not read {$at} ({$name}): \"minPosts\" must be a whole number, 0 or more.");
-            }
-
-            $min = (int) $min;
-
-            if (in_array($min, $seen, true)) {
-                throw new \RuntimeException("Could not read {$at} ({$name}): two rungs both sit at {$min} {$this->unit()}, and a threshold is what puts a rung in its place.");
-            }
-
-            $seen[] = $min;
-
-            $color = $this->clean($rung['color'] ?? null, 20);
-
-            if ($color !== null && ! preg_match('/^#[0-9a-fA-F]{3,8}$/', $color)) {
-                throw new \RuntimeException("Could not read {$at} ({$name}): \"color\" must be a hex colour such as #7c3aed.");
-            }
-
-            $entry = [
-                'name' => $name,
-                'minPosts' => $min,
-                'icon' => $this->clean($rung['icon'] ?? null, 100),
-                'color' => $color,
-                'description' => $this->clean($rung['description'] ?? null, 500),
-            ];
-
-            $plural = $this->clean($rung['namePlural'] ?? null, 100);
-
-            if ($plural !== null) {
-                $entry['namePlural'] = $plural;
-            }
-
+            $seen[] = $entry['minPosts'];
             $rungs[] = $entry;
         }
 
@@ -251,6 +232,46 @@ class SeedCommand extends AbstractCommand
         usort($rungs, fn (array $a, array $b) => $a['minPosts'] <=> $b['minPosts']);
 
         return $rungs;
+    }
+
+    /**
+     * One rung, checked the way the rung editor checks it.
+     *
+     * @return array{name: string, namePlural?: string, minPosts: int, icon: string|null, color: string|null, description: string|null}
+     */
+    private function validRung(mixed $rung, string $at): array
+    {
+        if (! is_array($rung)) {
+            throw new \RuntimeException("Could not read {$at}: each rung must be an object.");
+        }
+
+        $name = trim((string) ($rung['name'] ?? ''));
+
+        if ($name === '' || mb_strlen($name) > 100) {
+            throw new \RuntimeException("Could not read {$at}: give the rank a name, up to 100 characters.");
+        }
+
+        // The rung editor's own rule (Ladder::validThreshold), so a file can't seed a rung the editor would refuse.
+        if (! $this->ladder->validThreshold($rung['minPosts'] ?? null)) {
+            throw new \RuntimeException($this->ladder->metric() === 'renown'
+                ? "Could not read {$at} ({$name}): \"minPosts\" is a Renown level here, a whole number from 0 to 100."
+                : "Could not read {$at} ({$name}): \"minPosts\" must be a whole number, 0 or more.");
+        }
+
+        $color = Rung::clean($rung['color'] ?? null, 20);
+
+        if ($color !== null && ! preg_match('/^#[0-9a-fA-F]{3,8}$/', $color)) {
+            throw new \RuntimeException("Could not read {$at} ({$name}): \"color\" must be a hex color such as #7c3aed.");
+        }
+
+        return array_filter([
+            'name' => $name,
+            'namePlural' => Rung::clean($rung['namePlural'] ?? null, 100),
+            'minPosts' => (int) $rung['minPosts'],
+            'icon' => Rung::clean($rung['icon'] ?? null, 100),
+            'color' => $color,
+            'description' => Rung::clean($rung['description'] ?? null, 500),
+        ], fn ($value, $key) => $key !== 'namePlural' || $value !== null, ARRAY_FILTER_USE_BOTH);
     }
 
     /**
@@ -276,11 +297,11 @@ class SeedCommand extends AbstractCommand
      */
     private function decode(string $path): array
     {
-        if (! is_file($path) || ! is_readable($path)) {
+        if (! $this->files->isFile($path) || ! $this->files->isReadable($path)) {
             throw new \RuntimeException("Could not read {$path}: no such file, or it isn't readable.");
         }
 
-        $data = json_decode((string) file_get_contents($path), true);
+        $data = json_decode($this->files->get($path), true);
 
         if (! is_array($data)) {
             throw new \RuntimeException("Could not read {$path}: ".(json_last_error_msg() ?: 'it is not valid JSON.'));
@@ -291,26 +312,5 @@ class SeedCommand extends AbstractCommand
         }
 
         return array_values($data);
-    }
-
-    private function clean(mixed $value, int $max): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $value = trim((string) $value);
-
-        return $value === '' ? null : mb_substr($value, 0, $max);
-    }
-
-    /** The word the ladder's thresholds are counted in. */
-    private function unit(): string
-    {
-        return match ($this->ladder->metric()) {
-            'posts', 'money' => $this->ladder->metric(),
-            'renown' => 'level',
-            default => 'points',
-        };
     }
 }

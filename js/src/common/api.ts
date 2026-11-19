@@ -49,7 +49,6 @@ export type LadderData = {
   canListMembers: boolean;
   viewer: { score: number; groupId: number | null; exempt?: boolean } | null;
   banner: { title: string; tagline: string };
-  savedId: number | null;
 };
 
 export type SyncResult = {
@@ -69,6 +68,24 @@ export function ladderApi<T = LadderData>(method: string, path: string = '', bod
   });
 }
 
+/**
+ * Create (POST), edit (PATCH) or remove (DELETE) a rung through its JSON:API
+ * resource. The editor then reloads the whole ladder from `ladderApi('GET')`.
+ */
+export function rungsApi(
+  method: 'POST' | 'PATCH' | 'DELETE',
+  id?: number,
+  attributes?: Record<string, any>,
+  errorHandler?: (error: any) => void
+): Promise<any> {
+  return app.request({
+    method,
+    url: `${app.forum.attribute('apiUrl')}/ladder-rungs${id ? `/${id}` : ''}`,
+    body: attributes ? { data: { type: 'ladder-rungs', ...(id ? { id: String(id) } : {}), attributes } } : undefined,
+    errorHandler,
+  });
+}
+
 /** "10–24 posts", or "1600+ points" for the top rung. */
 export function rangeLabel(prefix: string, rung: RungData, metric?: Metric): any {
   if (metric === 'money') return money(rung.maxPosts === null ? `${rung.minPosts}+` : `${rung.minPosts}–${rung.maxPosts}`);
@@ -85,3 +102,16 @@ export type Standing = {
   current: { groupId: number; name: string; icon: string | null; color: string | null; min: number } | null;
   next: { groupId: number; name: string; icon: string | null; color: string | null; min: number } | null;
 };
+
+/**
+ * How far a score has come from the current rank toward the next, 0–100.
+ * A member can hold a rank above their own score (demotion off, a threshold
+ * raised), so it's measured from whichever is lower.
+ */
+export function progressPercent(score: number, currentMin: number | null, nextMin: number | null): number {
+  if (nextMin === null) return 100;
+
+  const from = Math.min(currentMin ?? 0, score);
+
+  return Math.max(0, Math.min(100, Math.round(((score - from) / Math.max(1, nextMin - from)) * 100)));
+}

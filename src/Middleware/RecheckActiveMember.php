@@ -43,6 +43,9 @@ class RecheckActiveMember implements MiddlewareInterface
         $actor = RequestUtil::getActor($request);
 
         if (! $actor->isGuest() && $this->ladder->metric() === 'points'
+            // A version check, not an extension check: this middleware is only
+            // registered while Leaderboard is enabled (extend.php), and only
+            // Leaderboard versions without PointsUpdated still need it.
             && ! class_exists(\HuseyinFiliz\Leaderboard\Event\PointsUpdated::class)
             && $this->cache->add('ladder.recheck.'.$actor->id, 1, self::INTERVAL)) {
             /*

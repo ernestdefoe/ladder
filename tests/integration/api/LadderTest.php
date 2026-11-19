@@ -81,7 +81,9 @@ class LadderTest extends TestCase
 
     private function save(int $actor, array $body, ?int $id = null): ResponseInterface
     {
-        return $this->send($this->request($id ? 'PATCH' : 'POST', '/api/ladder/rungs'.($id ? "/$id" : ''), ['authenticatedAs' => $actor, 'json' => $body]));
+        $data = ['type' => 'ladder-rungs', 'attributes' => $body] + ($id ? ['id' => (string) $id] : []);
+
+        return $this->send($this->request($id ? 'PATCH' : 'POST', '/api/ladder-rungs'.($id ? "/$id" : ''), ['authenticatedAs' => $actor, 'json' => ['data' => $data]]));
     }
 
     /** @return int[] */
@@ -115,7 +117,7 @@ class LadderTest extends TestCase
     {
         $this->assertSame(403, $this->save(2, ['name' => 'Elite', 'minPosts' => 50])->getStatusCode());
         $this->assertSame(403, $this->save(2, ['minPosts' => 1], 2)->getStatusCode());
-        $this->assertSame(403, $this->send($this->request('DELETE', '/api/ladder/rungs/2', ['authenticatedAs' => 2]))->getStatusCode());
+        $this->assertSame(403, $this->send($this->request('DELETE', '/api/ladder-rungs/2', ['authenticatedAs' => 2]))->getStatusCode());
         $this->assertSame(403, $this->send($this->request('POST', '/api/ladder/sync', ['authenticatedAs' => 2, 'json' => []]))->getStatusCode());
         $this->assertSame(403, $this->send($this->request('DELETE', '/api/ladder/rungs/2/image', ['authenticatedAs' => 2]))->getStatusCode());
 
@@ -128,11 +130,31 @@ class LadderTest extends TestCase
     {
         $response = $this->save(1, ['name' => 'Elite', 'namePlural' => 'Elites', 'minPosts' => 50, 'color' => '#ff0000']);
 
-        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        $this->assertSame(201, $response->getStatusCode(), (string) $response->getBody());
         $rung = $this->database()->table('ladder_rungs')->where('min_posts', 50)->first();
+        $this->assertSame((string) $rung->id, $this->json($response)['data']['id']);
         $group = Group::query()->findOrFail($rung->group_id);
         $this->assertSame(['Elite', 'Elites', '#ff0000'], [$group->name_singular, $group->name_plural, $group->color]);
         $this->assertTrue((bool) $rung->owns_group);
+    }
+
+    #[Test]
+    public function an_admin_edits_a_rung_and_its_group_and_can_adopt_an_existing_group()
+    {
+        $response = $this->save(1, ['name' => 'Starter', 'namePlural' => null, 'icon' => 'fas fa-seedling', 'minPosts' => 1, 'description' => '  Just joined. '], 1);
+
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        $group = Group::query()->findOrFail(10);
+        $this->assertSame(['Starter', 'Starter', 'fas fa-seedling'], [$group->name_singular, $group->name_plural, $group->icon], 'No plural: named the same both ways');
+        $rung = $this->database()->table('ladder_rungs')->where('id', 1)->first();
+        $this->assertSame([1, 'Just joined.'], [(int) $rung->min_posts, $rung->description]);
+
+        $this->assertSame(200, $this->save(1, ['minPosts' => 1], 1)->getStatusCode(), 'Keeping its own threshold is not a clash');
+
+        $adopted = $this->save(1, ['groupId' => 13, 'minPosts' => 40]);
+        $this->assertSame(201, $adopted->getStatusCode(), (string) $adopted->getBody());
+        $this->assertSame('Unrelated', Group::query()->findOrFail(13)->name_singular, 'An adopted group keeps its name');
+        $this->assertFalse((bool) $this->database()->table('ladder_rungs')->where('group_id', 13)->value('owns_group'));
     }
 
     #[Test]
@@ -141,11 +163,15 @@ class LadderTest extends TestCase
         $this->app();
         $groups = Group::query()->count();
 
-        $this->assertSame(422, $this->save(1, ['name' => 'Twin', 'minPosts' => 5])->getStatusCode(), 'A threshold already taken');
+        $twin = $this->save(1, ['name' => 'Twin', 'minPosts' => 5]);
+        $this->assertSame(422, $twin->getStatusCode(), 'A threshold already taken');
+        $this->assertStringContainsString('min_posts_taken', (string) $twin->getBody(), 'In the ladder\'s own words');
         $this->assertSame(422, $this->save(1, ['name' => 'Bad', 'minPosts' => 60, 'color' => 'red; x'])->getStatusCode(), 'Not a colour');
         $this->assertSame(422, $this->save(1, ['groupId' => Group::ADMINISTRATOR_ID, 'minPosts' => 70])->getStatusCode(), 'A core group');
         $this->assertSame(422, $this->save(1, ['groupId' => 11, 'minPosts' => 80])->getStatusCode(), 'A group already on the ladder');
         $this->assertSame(422, $this->save(1, ['name' => 'Neg', 'minPosts' => -1])->getStatusCode());
+        $this->assertSame(422, $this->save(1, ['minPosts' => 90])->getStatusCode(), 'A new group needs a name');
+        $this->assertSame(422, $this->save(1, ['name' => 'Half', 'minPosts' => 'ten'])->getStatusCode(), 'Not a whole number');
 
         $this->assertSame($groups, Group::query()->count(), 'No orphan group');
         $this->assertSame(3, $this->database()->table('ladder_rungs')->count());
@@ -165,11 +191,11 @@ class LadderTest extends TestCase
         };
         $path = fn () => $this->database()->table('ladder_rungs')->where('id', 2)->value('image_path');
 
-        $this->assertSame(200, $upload()->getStatusCode());
+        $this->assertSame(204, $upload()->getStatusCode());
         $first = $path();
         $this->assertTrue($disk->exists($first));
 
-        $this->assertSame(200, $upload()->getStatusCode());
+        $this->assertSame(204, $upload()->getStatusCode());
         $second = $path();
         $this->assertNotSame($first, $second);
         $this->assertTrue($disk->exists($second));
@@ -180,7 +206,7 @@ class LadderTest extends TestCase
         $this->assertSame(422, $this->send($this->request('POST', '/api/ladder/rungs/2/image', ['authenticatedAs' => 1])
             ->withUploadedFiles(['image' => new UploadedFile($text, 12, UPLOAD_ERR_OK, 'r.png', 'image/png')]))->getStatusCode(), 'A type sniffed from the file, not claimed');
 
-        $this->assertSame(200, $this->send($this->request('DELETE', '/api/ladder/rungs/2/image', ['authenticatedAs' => 1]))->getStatusCode());
+        $this->assertSame(204, $this->send($this->request('DELETE', '/api/ladder/rungs/2/image', ['authenticatedAs' => 1]))->getStatusCode());
         $this->assertNull($path());
         $this->assertFalse($disk->exists($second));
     }
@@ -201,10 +227,10 @@ class LadderTest extends TestCase
     #[Test]
     public function deleting_a_rung_deletes_only_a_group_it_created()
     {
-        $this->assertSame(200, $this->send($this->request('DELETE', '/api/ladder/rungs/2', ['authenticatedAs' => 1]))->getStatusCode());
+        $this->assertSame(204, $this->send($this->request('DELETE', '/api/ladder-rungs/2', ['authenticatedAs' => 1]))->getStatusCode());
         $this->assertNotNull(Group::query()->find(11), 'An existing group adopted as a rung is kept');
 
-        $this->assertSame(200, $this->send($this->request('DELETE', '/api/ladder/rungs/1', ['authenticatedAs' => 1]))->getStatusCode());
+        $this->assertSame(204, $this->send($this->request('DELETE', '/api/ladder-rungs/1', ['authenticatedAs' => 1]))->getStatusCode());
         $this->assertNull(Group::query()->find(10), 'A group the rung created goes with it');
     }
 
@@ -251,15 +277,24 @@ class LadderTest extends TestCase
     #[Test]
     public function a_rungs_members_are_listed_for_those_who_may_search_users()
     {
-        $this->assertSame(403, $this->get('/api/ladder/rungs/2/members')->getStatusCode());
+        $members = fn (int $rung, ?int $actor) => $this->send($this->request('GET', '/api/users', $actor ? ['authenticatedAs' => $actor] : [])
+            ->withQueryParams(['filter' => ['ladderRung' => (string) $rung], 'sort' => '-ladderScore', 'page' => ['limit' => 30]]));
 
-        $response = $this->get('/api/ladder/rungs/2/members', 2);
-        $this->assertSame(200, $response->getStatusCode());
+        $this->assertContains($members(2, null)->getStatusCode(), [401, 403], 'Core\'s searchUsers gate');
+
+        $response = $members(2, 2);
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
         $body = $this->json($response);
-        $this->assertSame(9, $body['total']);
-        $this->assertSame([6], array_values(array_unique(array_column($body['members'], 'score'))));
+        $this->assertSame(9, $body['meta']['page']['total'] ?? count($body['data']));
+        $this->assertSame([6], array_values(array_unique(array_column(array_column($body['data'], 'attributes'), 'ladderScore'))));
 
-        $this->assertSame(404, $this->get('/api/ladder/rungs/3/members', 2)->getStatusCode(), 'A hidden rung');
-        $this->assertSame(200, $this->get('/api/ladder/rungs/3/members', 1)->getStatusCode());
+        $hidden = $members(3, 2);
+        $this->assertSame([], $this->json($hidden)['data'] ?? null, (string) $hidden->getBody());
+        $this->assertNotEmpty($this->json($members(3, 1))['data'], 'except to admins');
+
+        $plain = $this->json($this->send($this->request('GET', '/api/users', ['authenticatedAs' => 1])));
+        $this->assertArrayNotHasKey('ladderScore', $plain['data'][0]['attributes'], 'No score outside a rank\'s list');
+        $this->assertSame(400, $this->send($this->request('GET', '/api/users', ['authenticatedAs' => 1])->withQueryParams(['sort' => 'ladderScore']))->getStatusCode(), 'The sort needs the filter');
     }
+
 }

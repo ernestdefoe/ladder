@@ -1,4 +1,8 @@
 import Extend from 'flarum/common/extenders';
-import RanksPage from './components/RanksPage';
+import PromotedNotification from './components/PromotedNotification';
 
-export default [new Extend.Routes().add('ladder.ranks', '/ranks', RanksPage)];
+export default [
+  // A lazy chunk: only the Ranks page and its member list need it.
+  new Extend.Routes().add('ladder.ranks', '/ranks', () => import('./components/RanksPage')),
+  new Extend.Notification().add('ladderPromoted', PromotedNotification),
+];

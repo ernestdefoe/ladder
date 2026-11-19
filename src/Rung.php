@@ -37,4 +37,12 @@ class Rung extends AbstractModel
     {
         return $this->belongsTo(Group::class);
     }
+
+    /** Trimmed and cut to length; empty becomes null. */
+    public static function clean(mixed $value, int $max): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : mb_substr($value, 0, $max);
+    }
 }

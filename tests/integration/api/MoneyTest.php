@@ -99,9 +99,9 @@ class MoneyTest extends TestCase
     #[Test]
     public function a_taken_threshold_is_refused_in_money_wording()
     {
-        $response = $this->send($this->request('POST', '/api/ladder/rungs', [
+        $response = $this->send($this->request('POST', '/api/ladder-rungs', [
             'authenticatedAs' => 1,
-            'json' => ['name' => 'Whale', 'minPosts' => 1000],
+            'json' => ['data' => ['type' => 'ladder-rungs', 'attributes' => ['name' => 'Whale', 'minPosts' => 1000]]],
         ]));
 
         $this->assertSame(422, $response->getStatusCode());

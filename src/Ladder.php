@@ -10,6 +10,7 @@ use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\Event\GroupsChanged;
 use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Collection;
 
@@ -104,6 +105,16 @@ class Ladder
         }
 
         return $this->metric() !== 'renown' || (int) $value <= 100;
+    }
+
+    /** The word a threshold is counted in, for messages: posts, points, money or level. */
+    public function unit(): string
+    {
+        return match ($this->metric()) {
+            'posts', 'money' => $this->metric(),
+            'renown' => 'level',
+            default => 'points',
+        };
     }
 
     /** The `users` column a metric reads, for every metric but Leaderboard's. */
@@ -298,14 +309,37 @@ class Ladder
      */
     public function syncChunk(int $afterId, int $limit = 500): array
     {
-        /*
-         * In points mode the total comes from Leaderboard's table by a join.
-         * 🚨 Query builder only: a raw join would skip the forum's table
-         * prefix and fail on every forum that has one.
-         */
+        $users = $this->scoresAfter($afterId, $limit);
+
+        if ($users->isEmpty()) {
+            return ['processed' => 0, 'changed' => 0, 'lastId' => $afterId, 'done' => true];
+        }
+
+        $ids = $users->pluck('id')->map(fn ($id) => (int) $id)->all();
+        [$remove, $insert] = $this->plan($users, $ids);
+
+        $this->apply($remove, $insert);
+
+        return [
+            'processed' => count($ids),
+            'changed' => count(array_unique([...array_merge([], ...array_values($remove)), ...array_column($insert, 'user_id')])),
+            'lastId' => (int) end($ids),
+            'done' => count($ids) < $limit,
+        ];
+    }
+
+    /**
+     * The next slice of members by id, with their score.
+     *
+     * In points mode the total comes from Leaderboard's table by a join.
+     * 🚨 Query builder only: a raw join would skip the forum's table prefix
+     * and fail on every forum that has one.
+     */
+    private function scoresAfter(int $afterId, int $limit): Collection
+    {
         $metric = $this->metric();
 
-        $users = $metric === 'points'
+        return $metric === 'points'
             ? $this->db->table('users')
                 ->leftJoin(self::LEADERBOARD_TOTALS, self::LEADERBOARD_TOTALS.'.user_id', '=', 'users.id')
                 ->where('users.id', '>', $afterId)
@@ -317,12 +351,17 @@ class Ladder
                 ->orderBy('id')
                 ->limit($limit)
                 ->get(['id', $this->column($metric).' as score']);
+    }
 
-        if ($users->isEmpty()) {
-            return ['processed' => 0, 'changed' => 0, 'lastId' => $afterId, 'done' => true];
-        }
-
-        $ids = $users->pluck('id')->map(fn ($id) => (int) $id)->all();
+    /**
+     * Which rung memberships to drop and add for a slice, from one read of
+     * their current groups.
+     *
+     * @param int[] $ids
+     * @return array{0: array<int, int[]>, 1: list<array{user_id: int, group_id: int}>}
+     */
+    private function plan(Collection $users, array $ids): array
+    {
         $ladderIds = $this->groupIds();
 
         $memberships = $this->db->table('group_user')
@@ -337,7 +376,6 @@ class Ladder
         foreach ($users as $user) {
             $all = $memberships->get($user->id, []);
             $held = array_values(array_intersect($all, $ladderIds));
-
             $target = $ladderIds ? $this->target(max(0, (int) $user->score), $held, $all) : null;
             $wanted = $target === null ? [] : [$target];
 
@@ -350,11 +388,20 @@ class Ladder
             }
         }
 
-        $changedUsers = count(array_unique(array_merge(
-            array_merge([], ...array_values($remove)),
-            array_column($insert, 'user_id'),
-        )));
+        return [$remove, $insert];
+    }
 
+    /**
+     * One delete per rung and one insert for the slice, on the pivot table
+     * directly: attaching through each User model would be a query or two per
+     * member, 500 at a time, and fire the GroupsChanged events a quiet re-rank
+     * must not send.
+     *
+     * @param array<int, int[]> $remove
+     * @param list<array{user_id: int, group_id: int}> $insert
+     */
+    private function apply(array $remove, array $insert): void
+    {
         $this->db->transaction(function () use ($remove, $insert) {
             foreach ($remove as $groupId => $userIds) {
                 $this->db->table('group_user')
@@ -367,15 +414,6 @@ class Ladder
                 $this->db->table('group_user')->insert($insert);
             }
         });
-
-        $lastId = (int) end($ids);
-
-        return [
-            'processed' => count($ids),
-            'changed' => $changedUsers,
-            'lastId' => $lastId,
-            'done' => count($ids) < $limit,
-        ];
     }
 
     /**
@@ -434,38 +472,32 @@ class Ladder
     }
 
     /**
-     * Members holding one rung, highest score first.
+     * Narrow a user query to the members holding one rung, with each one's
+     * score selected as `ladder_score` so the list can show and sort by it.
+     * A hidden rung lists nobody but to admins, as on the Ranks page.
      *
      * 🚨 Query builder, never raw SQL with table names: raw SQL skips the
      * forum's table prefix and breaks on every forum that has one.
-     *
-     * @return array{users: \Illuminate\Support\Collection<int, User>, total: int}
      */
-    public function membersOf(Rung $rung, User $viewer, int $offset, int $limit): array
+    public function scopeToRung(Builder $query, ?Rung $rung, User $viewer): void
     {
-        $query = User::query()
-            ->whereVisibleTo($viewer)
-            ->whereHas('groups', fn ($q) => $q->where('groups.id', $rung->group_id));
-
-        $total = (clone $query)->count();
-
-        $query->select('users.*');
-
+        // Selected even for an empty list: the sort orders by it either way.
         $metric = $this->metric();
 
-        match ($metric) {
-            'points' => $query
-                ->leftJoin(self::LEADERBOARD_TOTALS, self::LEADERBOARD_TOTALS.'.user_id', '=', 'users.id')
-                ->addSelect(self::LEADERBOARD_TOTALS.'.points_total as ladder_score')
-                ->orderByDesc(self::LEADERBOARD_TOTALS.'.points_total'),
-            default => $query
-                ->addSelect('users.'.$this->column($metric).' as ladder_score')
-                ->orderByDesc('users.'.$this->column($metric)),
-        };
+        if ($metric === 'points') {
+            $query->leftJoin(self::LEADERBOARD_TOTALS, self::LEADERBOARD_TOTALS.'.user_id', '=', 'users.id')
+                ->addSelect(self::LEADERBOARD_TOTALS.'.points_total as ladder_score');
+        } else {
+            $query->addSelect('users.'.$this->column($metric).' as ladder_score');
+        }
 
-        $users = $query->orderBy('users.id')->offset($offset)->limit($limit)->get();
+        if (! $rung || ($rung->group?->is_hidden && ! $viewer->isAdmin())) {
+            $query->whereIn('users.id', []);
 
-        return ['users' => $users, 'total' => $total];
+            return;
+        }
+
+        $query->whereHas('groups', fn ($q) => $q->where('groups.id', $rung->group_id));
     }
 
     /**
@@ -501,6 +533,8 @@ class Ladder
 
         return $this->db->table('group_user')
             ->whereIn('group_id', $ids)
+            // One grouped COUNT for every rung: the builder has no grouped-count
+            // helper, and counting per group would be a query per rung.
             ->selectRaw('group_id, count(*) as aggregate')
             ->groupBy('group_id')
             ->pluck('aggregate', 'group_id')

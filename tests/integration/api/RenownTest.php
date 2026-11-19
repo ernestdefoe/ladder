@@ -91,9 +91,9 @@ class RenownTest extends TestCase
     #[Test]
     public function a_threshold_past_level_100_is_refused()
     {
-        $response = $this->send($this->request('POST', '/api/ladder/rungs', [
+        $response = $this->send($this->request('POST', '/api/ladder-rungs', [
             'authenticatedAs' => 1,
-            'json' => ['name' => 'Beyond', 'minPosts' => 101],
+            'json' => ['data' => ['type' => 'ladder-rungs', 'attributes' => ['name' => 'Beyond', 'minPosts' => 101]]],
         ]));
 
         $this->assertSame(422, $response->getStatusCode());

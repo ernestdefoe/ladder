@@ -113,7 +113,7 @@ class SeedCommandTest extends ConsoleTestCase
     public function a_bad_file_is_refused_and_writes_nothing(): void
     {
         $this->assertStringContainsString('Could not read', $this->seed(['--file' => $this->json('{ not json')]));
-        $this->assertStringContainsString('hex colour', $this->seed(['--file' => $this->json([['name' => 'Gold', 'minPosts' => 5, 'color' => 'gold']])]));
+        $this->assertStringContainsString('hex color', $this->seed(['--file' => $this->json([['name' => 'Gold', 'minPosts' => 5, 'color' => 'gold']])]));
         $this->assertStringContainsString('two rungs both sit at 5', $this->seed(['--file' => $this->json([['name' => 'A', 'minPosts' => 5], ['name' => 'B', 'minPosts' => 5]])]));
         $this->assertSame([], $this->thresholds());
     }

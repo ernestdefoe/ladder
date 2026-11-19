@@ -4,18 +4,17 @@ import IndexSidebar from 'flarum/forum/components/IndexSidebar';
 import LinkButton from 'flarum/common/components/LinkButton';
 import ItemList from 'flarum/common/utils/ItemList';
 import IndexPage from 'flarum/forum/components/IndexPage';
-import PromotedNotification from './components/PromotedNotification';
 import LadderStanding from './components/LadderStanding';
 import LadderBanner from '../common/components/LadderBanner';
 import { ladder, loadLadder } from './ladderStore';
 
 export { default as extend } from './extend';
-export { default as RanksPage } from './components/RanksPage';
 export { LadderBanner, loadLadder };
 
-app.initializers.add('ernestdefoe-ladder', () => {
-  app.notificationComponents.ladderPromoted = PromotedNotification;
+// Members whose standing has been asked for once already.
+const fetching = new WeakSet<object>();
 
+app.initializers.add('ernestdefoe-ladder', () => {
   /*
    * Rank and progress on a member's profile. 🚨 By module name: UserPage is a
    * lazy chunk in Flarum 2, so a static import would be undefined here.
@@ -36,9 +35,9 @@ app.initializers.add('ernestdefoe-ladder', () => {
    * means "fetched, nothing to show"; undefined means never fetched).
    */
   extend('flarum/forum/components/UserPage', 'show', function (this: any, _: any, user: any) {
-    if (!user || user.attribute('ladderStanding') !== undefined || user.__ladderFetching) return;
+    if (!user || user.attribute('ladderStanding') !== undefined || fetching.has(user)) return;
 
-    user.__ladderFetching = true;
+    fetching.add(user);
     app.store.find('users', user.id()).finally(() => m.redraw());
   });
 

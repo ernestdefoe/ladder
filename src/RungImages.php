@@ -5,7 +5,6 @@ namespace Ernestdefoe\Ladder;
 use Illuminate\Contracts\Filesystem\Cloud;
 use Illuminate\Contracts\Filesystem\Factory;
 use Intervention\Image\ImageManager;
-use Psr\Http\Message\UploadedFileInterface;
 
 /**
  * The artwork on each rung's banner card.
@@ -35,10 +34,10 @@ class RungImages
     }
 
     /** @return string the stored file name */
-    public function put(int $rungId, UploadedFileInterface $file): string
+    public function put(int $rungId, string $contents): string
     {
         $encoded = (string) $this->images
-            ->read($file->getStream()->getContents())
+            ->read($contents)
             ->scaleDown(width: self::MAX_WIDTH)
             ->toWebp(self::QUALITY);
 

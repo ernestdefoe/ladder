@@ -12,3 +12,10 @@ parameters:
         - extend.php
         - src
     databaseMigrationsPath: [migrations]
+    ignoreErrors:
+        # The optional extensions' events, wired in Extend\Conditional blocks
+        # that only run while that extension is enabled. Naming a class with
+        # ::class never loads it.
+        -
+            identifier: class.notFound
+            path: extend.php
